@@ -1,13 +1,11 @@
 
-// TODO: implementing acceleration
 // TODO: add mouse drawing wall
-// TODO: add trail for moving object
 // TODO: add multiple more objects and process with quadtree
 
 #include <bits/stdc++.h>
 #include <SDL.h>
 
-using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand;
+using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack;
 
 #define HuyN_ int main(int argc, char *argv[])
 
@@ -23,8 +21,9 @@ public:
 
 // GLOBAL VARIABLE
 
-uint64_t FrameUpdateInterval = 5, // ms
-         LatestUpdatedTick = 0;
+uint64_t FrameUpdateInterval = 10, // ms
+         LatestUpdatedTick = 0,
+         CurrentTick;
 
 int
 SDL_RenderDrawCircle(SDL_Renderer * renderer,const int x,const int y,const int radius)
@@ -43,6 +42,48 @@ SDL_RenderDrawCircle(SDL_Renderer * renderer,const int x,const int y,const int r
         status += SDL_RenderDrawPoint(renderer, x + offsetY, y - offsetX);
         status += SDL_RenderDrawPoint(renderer, x - offsetX, y - offsetY);
         status += SDL_RenderDrawPoint(renderer, x - offsetY, y - offsetX);
+
+        if (status < 0) {
+            status = -1;
+            break;
+        }
+
+        if (d >= 2*offsetX) {
+            d -= 2*offsetX + 1;
+            offsetX +=1;
+        }
+        else if (d < 2 * (radius - offsetY)) {
+            d += 2 * offsetY - 1;
+            offsetY -= 1;
+        }
+        else {
+            d += 2 * (offsetY - offsetX - 1);
+            offsetY -= 1;
+            offsetX += 1;
+        }
+    }
+
+    return status;
+}
+
+int
+SDL_RenderFillCircle(SDL_Renderer * renderer, const int x, const int y, const int radius)
+{
+    int offsetX = 0;
+    int offsetY = radius;
+    int d = radius - 1;
+    int status = 0;
+
+    while (offsetY >= offsetX) {
+
+        status += SDL_RenderDrawLine(renderer, x - offsetY, y + offsetX,
+                                     x + offsetY, y + offsetX);
+        status += SDL_RenderDrawLine(renderer, x - offsetX, y + offsetY,
+                                     x + offsetX, y + offsetY);
+        status += SDL_RenderDrawLine(renderer, x - offsetX, y - offsetY,
+                                     x + offsetX, y - offsetY);
+        status += SDL_RenderDrawLine(renderer, x - offsetY, y - offsetX,
+                                     x + offsetY, y - offsetX);
 
         if (status < 0) {
             status = -1;
@@ -165,6 +206,7 @@ struct objectsProperties {
     double mass{};
     double angularVelocity{};
     double angularAcceleration{};
+    queue<PVector> Trail;
 };
 
 vector<objectsProperties> objects;
@@ -185,9 +227,30 @@ static int resizingEventWatcher(void* data, const SDL_Event* event) {
 
 
 void DrawObjects(SDL_Renderer *renderer) {
+    // Trail
+    for (auto & o : objects) {
+        queue<PVector> tempTrail = o.Trail;
+        stack<PVector> DrawTrail;
+        while (!tempTrail.empty()) {
+            DrawTrail.push(tempTrail.front());
+            tempTrail.pop();
+        }
+
+        int offsetColor = 0;
+
+        while (!DrawTrail.empty()) {
+            SDL_SetRenderDrawColor(renderer, 0xFF - offsetColor, 0xFF - offsetColor, 0xFF - offsetColor, 255);
+            SDL_RenderFillCircle(renderer, static_cast<int>(DrawTrail.top().x), static_cast<int>(DrawTrail.top().y), static_cast<int>(o.radius));
+            DrawTrail.pop();
+            offsetColor += 12;
+        }
+        if (o.Trail.size() > 10) o.Trail.pop();
+    }
+
+    // Main Object
     for (const auto & o : objects) {
-        SDL_RenderDrawCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
-        SDL_RenderDrawPoint(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y));
+        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 255);
+        SDL_RenderFillCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
     }
 }
 
@@ -197,13 +260,13 @@ void Simulate(SDL_Renderer *renderer) {
     if (objects[0].position.x - objects[0].radius <= 0 || objects[0].position.x + objects[0].radius >= WindowSize.w) {
         objects[0].velocity.x *= -1;
     }
-    if (objects[0].position.y - objects[0].radius <= 0 || objects[0].position.y + objects[0].radius >= 1.0 * WindowSize.h) {
+    if (objects[0].position.y - objects[0].radius <= 0 || objects[0].position.y + objects[0].radius >= 1.0 * iFloor) {
         objects[0].velocity.y *= -1;
     }
     if (objects[1].position.x - objects[1].radius <= 0 || objects[1].position.x + objects[1].radius >= WindowSize.w) {
         objects[1].velocity.x *= -1;
     }
-    if (objects[1].position.y - objects[1].radius <= 0 || objects[1].position.y + objects[1].radius >= 1.0 * WindowSize.h) {
+    if (objects[1].position.y - objects[1].radius <= 0 || objects[1].position.y + objects[1].radius >= 1.0 * iFloor) {
         objects[1].velocity.y *= -1;
     }
 
@@ -217,6 +280,18 @@ void Simulate(SDL_Renderer *renderer) {
         vPosSub = -1 * vPosSub;
         objects[1].velocity.add((2 * objects[0].mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub);
     }
+
+    // Acceleration
+
+    objects[0].velocity.add((static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[0].acceleration);
+    objects[1].velocity.add((static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[1].acceleration);
+
+    cout << objects[0].velocity.x << ' ' << (static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000 * objects[0].acceleration).x << endl;
+
+    // Trail
+
+    objects[0].Trail.push(objects[0].position);
+    objects[1].Trail.push(objects[1].position);
 
     objects[0].position.add(objects[0].velocity);
     objects[1].position.add(objects[1].velocity);
@@ -251,7 +326,7 @@ HuyN_ {
     objects.push_back({
         50,
         {400, static_cast<double>(iFloor - 100 - 1)},
-        {8, 4},
+        {8, 2},
         {0, 0},
         40,
         0,
@@ -259,14 +334,18 @@ HuyN_ {
     });
 
     objects.push_back({
-        100,
+        75,
         {600, static_cast<double>(iFloor - 100 - 1)},
-        {6, 7},
+        {5, 1},
         {0, 0},
         40,
         0,
         0
     });
+
+    for (auto& o : objects) {
+        o.acceleration.add(GravitationForce);
+    }
 
     while (isRunning) {
 
@@ -291,10 +370,10 @@ HuyN_ {
             SDL_RenderDrawLine(renderer, LinesX.x, iFloor, LinesX.y, iFloor + 10);
             LinesX.x += 10; LinesX.y += 10;
         }
-
-        if (const uint64_t CurrentTick = SDL_GetTicks(); CurrentTick - LatestUpdatedTick >= FrameUpdateInterval) {
-            LatestUpdatedTick = CurrentTick;
+        
+        if (CurrentTick = SDL_GetTicks(); CurrentTick - LatestUpdatedTick >= FrameUpdateInterval) {
             Simulate(renderer);
+            LatestUpdatedTick = CurrentTick;
         }
 
         SDL_RenderPresent(renderer);
