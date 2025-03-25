@@ -1,6 +1,6 @@
 
-// TODO: add mouse drawing wall
 // TODO: add multiple more objects and process with quadtree
+// TODO: add mouse drawing wall
 
 #include <bits/stdc++.h>
 #include <SDL.h>
@@ -286,8 +286,6 @@ void Simulate(SDL_Renderer *renderer) {
     objects[0].velocity.add((static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[0].acceleration);
     objects[1].velocity.add((static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[1].acceleration);
 
-    cout << objects[0].velocity.x << ' ' << (static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000 * objects[0].acceleration).x << endl;
-
     // Trail
 
     objects[0].Trail.push(objects[0].position);
@@ -324,9 +322,9 @@ HuyN_ {
     bool isRunning{true};
 
     objects.push_back({
-        50,
+        100,
         {400, static_cast<double>(iFloor - 100 - 1)},
-        {8, 2},
+        {6, 2},
         {0, 0},
         40,
         0,
@@ -357,6 +355,8 @@ HuyN_ {
                 case SDL_QUIT:
                     isRunning = false;
                     break;
+                case SDL_MOUSEBUTTONDOWN:
+                    if (event.button.button == SDL_BUTTON_LEFT) {}
                 default:
                     break;
             }
