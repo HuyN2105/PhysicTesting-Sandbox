@@ -4,6 +4,11 @@
 
 #include <bits/stdc++.h>
 #include <SDL.h>
+#include <QuadTree.h>
+
+QuadTree::QuadTree Q{QuadTree::Box<double>{10, 10, 680, 480}};
+
+
 
 using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack;
 
