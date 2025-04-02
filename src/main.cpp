@@ -6,9 +6,6 @@
 #include <SDL.h>
 #include <QuadTree.h>
 
-QuadTree::QuadTree Q{QuadTree::Box<double>{10, 10, 680, 480}};
-
-
 
 using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack;
 
@@ -126,6 +123,12 @@ struct Pos {
 
 Size WindowSize{1280, 720};
 constexpr Size WindowMinSize{640, 480};
+
+
+
+QuadTree::QuadTree Q{QuadTree::Box<double>{10, 10, static_cast<double>(WindowSize.w - 20), static_cast<double>(WindowSize.h - 20)}};
+
+
 
 int iDistance_From_Bottom_To_Floor = 40,
     iFloor = WindowSize.h - iDistance_From_Bottom_To_Floor;
