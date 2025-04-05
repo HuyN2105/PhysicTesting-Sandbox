@@ -23,7 +23,7 @@ namespace HuyNVector {
         constexpr Vector2(const Vector2<T>& _v) noexcept : x(_v.x), y(_v.y) {};
 
 
-        // ********************************* VECTOR OPERATION ********************************* //
+        // ********************************* VECTOR OPERATOR ********************************* //
 
         constexpr Vector2<T>& operator+=(const Vector2<T>& _v) noexcept {
             x += _v.x;
@@ -81,31 +81,38 @@ namespace HuyNVector {
 
     };
 
-    // ********************************* VECTOR OPERATION ********************************* //
+    // ********************************* NON-MEMBER VECTOR OPERATOR OVERLOADS ********************************* //
 
     template<typename T>
-    constexpr Vector2<T> operator+(Vector2<T> lhs, const Vector2<T>& rhs) {
-        lhs += rhs;
-        return lhs;
+    constexpr Vector2<T> operator+(const Vector2<T>& lhs, const Vector2<T>& rhs) {
+        return Vector2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
     }
 
     template<typename T>
-    constexpr Vector2<T> operator-(Vector2<T> lhs, const Vector2<T>& rhs) {
-        lhs -= rhs;
-        return lhs;
+    constexpr Vector2<T> operator-(const Vector2<T>& lhs, const Vector2<T>& rhs) {
+        return Vector2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
     }
 
     template<typename T>
-    constexpr Vector2<T> operator*(Vector2<T> _v, const T lhs) {
-        _v *= lhs;
-        return _v;
+    constexpr Vector2<T> operator*(T lhs, const Vector2<T>& rhs) {
+        return Vector2<T>(lhs * rhs.x, lhs * rhs.y);
     }
 
     template<typename T>
-    constexpr Vector2<T> operator/(Vector2<T> _v, const T lhs) {
-        _v /= lhs;
-        return _v;
+    constexpr Vector2<T> operator*(const Vector2<T>& lhs, T rhs) {
+        return Vector2<T>(lhs.x * rhs, lhs.y * rhs);
     }
+
+    template<typename T>
+    constexpr Vector2<T> operator/(const Vector2<T>& lhs, T rhs) {
+        return Vector2<T>(lhs.x / rhs, lhs.y / rhs);
+    }
+
+    template<typename T>
+    constexpr Vector2<T> operator-(const Vector2<T>& v) {
+        return Vector2<T>(-v.x, -v.y);
+    }
+
 }
 
 #endif //VECTOR2_H

@@ -11,7 +11,7 @@
 
 using HuyNVector::Vector2;
 
-namespace QuadTree {
+namespace Shape {
 
     template<typename T>
     class Box {
@@ -65,6 +65,15 @@ namespace QuadTree {
             if (quadrant == "se") return Box(left + halfWidth, top + halfHeight, halfWidth + extraWidth, halfHeight + extraHeight);
 
             return Box(0, 0, 0, 0);
+        }
+
+
+        // ******************************** BUILT-IN DRAW FUNCTIONS ******************************** //
+
+
+        constexpr void SDL_DrawBox(SDL_Renderer *renderer) const noexcept {
+            const SDL_Rect box{static_cast<int>(this.left), static_cast<int>(this.top), static_cast<int>(this.width), static_cast<int>(this.height)};
+            SDL_RenderDrawRect(renderer, &box);
         }
 
     };

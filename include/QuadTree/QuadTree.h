@@ -20,14 +20,14 @@ namespace QuadTree {
         // ****************************** QUADTREE INITIALIZATION ****************************** //
 
         int capacity;                   // default value: 4
-        Box<T> boundary;
+        Shape::Box<T> boundary;
         bool divided;
 
         std::vector<Vector2<T>> points{};
 
         QuadTree *child[4]{};
 
-        constexpr explicit QuadTree(Box<T> _boundary, const int _capacity = 4) : capacity(_capacity), boundary(_boundary), divided(false) {}
+        constexpr explicit QuadTree(Shape::Box<T> _boundary, const int _capacity = 4) : capacity(_capacity), boundary(_boundary), divided(false) {}
 
         // ********************************* QUADTREE FUNCTIONS ******************************** //
 
@@ -53,7 +53,7 @@ namespace QuadTree {
             return points;
         }
 
-        [[nodiscard]] constexpr Box<T> *getBoundary(Vector2<T> _pos) {
+        [[nodiscard]] constexpr Shape::Box<T> *getBoundary(Vector2<T> _pos) {
             if (divided) {
                 for (auto& c : child) {
                     if (c->boundary.contains(_pos)) {
@@ -104,6 +104,14 @@ namespace QuadTree {
         }
 
 
+        // ********************************* BUILT-IN QUADTREE DRAW FUNCTION ******************************** //
+
+        constexpr void SDL_DrawTree(SDL_Renderer *renderer) {
+            if (this->divided) {
+                for (auto & c : this->child) c->SDL_DrawTree(renderer);
+            }
+            this->boundary.SDL_DrawBox(renderer);
+        }
 
     };
 }

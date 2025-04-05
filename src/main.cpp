@@ -5,9 +5,9 @@
 #include <bits/stdc++.h>
 #include <SDL.h>
 #include <QuadTree.h>
+#include <Circle.h>
 
-
-using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack;
+using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack, HuyNVector::Vector2;
 
 #define HuyN_ int main(int argc, char *argv[])
 
@@ -27,90 +27,6 @@ uint64_t FrameUpdateInterval = 10, // ms
          LatestUpdatedTick = 0,
          CurrentTick;
 
-int
-SDL_RenderDrawCircle(SDL_Renderer * renderer,const int x,const int y,const int radius)
-{
-    int offsetX = 0;
-    int offsetY = radius;
-    int d = radius - 1;
-    int status = 0;
-
-    while (offsetY >= offsetX) {
-        status += SDL_RenderDrawPoint(renderer, x + offsetX, y + offsetY);
-        status += SDL_RenderDrawPoint(renderer, x + offsetY, y + offsetX);
-        status += SDL_RenderDrawPoint(renderer, x - offsetX, y + offsetY);
-        status += SDL_RenderDrawPoint(renderer, x - offsetY, y + offsetX);
-        status += SDL_RenderDrawPoint(renderer, x + offsetX, y - offsetY);
-        status += SDL_RenderDrawPoint(renderer, x + offsetY, y - offsetX);
-        status += SDL_RenderDrawPoint(renderer, x - offsetX, y - offsetY);
-        status += SDL_RenderDrawPoint(renderer, x - offsetY, y - offsetX);
-
-        if (status < 0) {
-            status = -1;
-            break;
-        }
-
-        if (d >= 2*offsetX) {
-            d -= 2*offsetX + 1;
-            offsetX +=1;
-        }
-        else if (d < 2 * (radius - offsetY)) {
-            d += 2 * offsetY - 1;
-            offsetY -= 1;
-        }
-        else {
-            d += 2 * (offsetY - offsetX - 1);
-            offsetY -= 1;
-            offsetX += 1;
-        }
-    }
-
-    return status;
-}
-
-int
-SDL_RenderFillCircle(SDL_Renderer * renderer, const int x, const int y, const int radius)
-{
-    int offsetX = 0;
-    int offsetY = radius;
-    int d = radius - 1;
-    int status = 0;
-
-    while (offsetY >= offsetX) {
-
-        status += SDL_RenderDrawLine(renderer, x - offsetY, y + offsetX,
-                                     x + offsetY, y + offsetX);
-        status += SDL_RenderDrawLine(renderer, x - offsetX, y + offsetY,
-                                     x + offsetX, y + offsetY);
-        status += SDL_RenderDrawLine(renderer, x - offsetX, y - offsetY,
-                                     x + offsetX, y - offsetY);
-        status += SDL_RenderDrawLine(renderer, x - offsetY, y - offsetX,
-                                     x + offsetY, y - offsetX);
-
-        if (status < 0) {
-            status = -1;
-            break;
-        }
-
-        if (d >= 2*offsetX) {
-            d -= 2*offsetX + 1;
-            offsetX +=1;
-        }
-        else if (d < 2 * (radius - offsetY)) {
-            d += 2 * offsetY - 1;
-            offsetY -= 1;
-        }
-        else {
-            d += 2 * (offsetY - offsetX - 1);
-            offsetY -= 1;
-            offsetX += 1;
-        }
-    }
-
-    return status;
-}
-
-
 struct Size {
     int w;
     int h;
@@ -126,95 +42,25 @@ constexpr Size WindowMinSize{640, 480};
 
 
 
-QuadTree::QuadTree Q{QuadTree::Box<double>{10, 10, static_cast<double>(WindowSize.w - 20), static_cast<double>(WindowSize.h - 20)}};
+QuadTree::QuadTree Q{Shape::Box<double>{10, 10, static_cast<double>(WindowSize.w - 20), static_cast<double>(WindowSize.h - 20)}};
 
 
 
 int iDistance_From_Bottom_To_Floor = 40,
     iFloor = WindowSize.h - iDistance_From_Bottom_To_Floor;
 
-class PVector {
-public:
-    double x;
-    double y;
 
-    PVector() : x(0), y(0) {};
-
-    PVector(const double x_, const double y_) : x(x_), y(y_) {};
-
-    void add(const PVector v) {
-        x = x + v.x;
-        y = y + v.y;
-    }
-
-    void distribute(const PVector v) {
-        x = x - v.x;
-        y = y - v.y;
-    }
-
-    [[nodiscard]] PVector rotate(const double deg) const {
-        return PVector({x + deg, y + deg});
-    }
-
-    [[nodiscard]] PVector mult(const double lhs) const {
-        return PVector({x * lhs, y * lhs});
-    }
-
-    [[nodiscard]] PVector div(const double lhs) const {
-        return PVector({x / lhs, y / lhs});
-    }
-
-    [[nodiscard]] double mag() const {
-        return sqrt(pow(x, 2) + pow(y, 2));
-    }
-
-    [[nodiscard]] PVector normalize() const {
-        return div(mag() == 0 ? 1 : mag());
-    }
-
-    [[nodiscard]] PVector plus(const PVector v) const {
-        return PVector{x + v.x, y + v.y};
-    }
-
-    [[nodiscard]] PVector sub(const PVector v) const {
-        return PVector{x - v.x, y - v.y};
-    }
-
-    [[nodiscard]] double dot(const PVector v) const {
-        return x * v.x + y * v.y;
-    }
-
-    [[nodiscard]] double dist(const PVector v) const {
-        return sqrt(pow(x - v.x, 2) + pow(y - v.y, 2));
-    }
-
-    [[nodiscard]] double angleBetween(const PVector v) const {
-        return acos(this->dot(v) / (this->mag() * v.mag()));
-    }
-
-    void random2D(const int start = 50, const int end = 100) {
-        x = rand() % (end - start) + start;
-        y = rand() % (end - start) + start;
-    }
-
-};
-
-PVector operator*(const double lhs, const PVector & sub) {
-    return PVector{sub.x * lhs, sub.y * lhs};
-};
-
-
-const PVector GravitationForce({0, 9.8});
+constexpr Vector2<double> GravitationForce{0, 9.8};
 
 struct objectsProperties {
     double radius{};
-    PVector position{};
-    PVector velocity; // pixel per updateInterval
-    PVector acceleration;
+    Vector2<double> position{};
+    Vector2<double> velocity; // pixel per updateInterval
+    Vector2<double> acceleration;
     double mass{};
     double angularVelocity{};
     double angularAcceleration{};
-    queue<PVector> Trail;
+    queue<Vector2<double>> Trail;
 };
 
 vector<objectsProperties> objects;
@@ -237,8 +83,8 @@ static int resizingEventWatcher(void* data, const SDL_Event* event) {
 void DrawObjects(SDL_Renderer *renderer) {
     // Trail
     for (auto & o : objects) {
-        queue<PVector> tempTrail = o.Trail;
-        stack<PVector> DrawTrail;
+        queue<Vector2<double>> tempTrail = o.Trail;
+        stack<Vector2<double>> DrawTrail;
         while (!tempTrail.empty()) {
             DrawTrail.push(tempTrail.front());
             tempTrail.pop();
@@ -248,7 +94,7 @@ void DrawObjects(SDL_Renderer *renderer) {
 
         while (!DrawTrail.empty()) {
             SDL_SetRenderDrawColor(renderer, 0xFF - offsetColor, 0xFF - offsetColor, 0xFF - offsetColor, 255);
-            SDL_RenderFillCircle(renderer, static_cast<int>(DrawTrail.top().x), static_cast<int>(DrawTrail.top().y), static_cast<int>(o.radius));
+            Shape::SDL_RenderFillCircle(renderer, static_cast<int>(DrawTrail.top().x), static_cast<int>(DrawTrail.top().y), static_cast<int>(o.radius));
             DrawTrail.pop();
             offsetColor += 12;
         }
@@ -256,12 +102,11 @@ void DrawObjects(SDL_Renderer *renderer) {
     }
 
     // Main Object
-    for (const auto & o : objects) {
+    for (auto & o : objects) {
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 255);
-        SDL_RenderFillCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
+        Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
     }
 }
-
 
 void Simulate(SDL_Renderer *renderer) {
 
@@ -278,29 +123,29 @@ void Simulate(SDL_Renderer *renderer) {
         objects[1].velocity.y *= -1;
     }
 
-    if (objects[1].position.dist(objects[0].position) <= objects[1].radius + objects[0].radius) {
+    if (objects[1].position.distance(objects[0].position) <= objects[1].radius + objects[0].radius) {
         const double vMassSum = objects[0].mass + objects[1].mass;
-        PVector vDiff = objects[1].velocity.sub(objects[0].velocity);
-        PVector vPosSub = objects[1].position.sub(objects[0].position);
-        const double vDist = vPosSub.mag();
-        objects[0].velocity.add((2 * objects[1].mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub);
-        vDiff = -1 * vDiff;
-        vPosSub = -1 * vPosSub;
-        objects[1].velocity.add((2 * objects[0].mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub);
+        Vector2<double> vDiff = objects[1].velocity - objects[0].velocity;
+        Vector2<double> vPosSub = objects[1].position - objects[0].position;
+        const double vDist = vPosSub.magnitude();
+        objects[0].velocity += (2 * objects[1].mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
+        vDiff = -1.0 * vDiff;
+        vPosSub = -1.0 * vPosSub;
+        objects[1].velocity += (2 * objects[0].mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
     }
 
     // Acceleration
 
-    objects[0].velocity.add((static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[0].acceleration);
-    objects[1].velocity.add((static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[1].acceleration);
+    objects[0].velocity += (static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[0].acceleration;
+    objects[1].velocity += (static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[1].acceleration;
 
     // Trail
 
     objects[0].Trail.push(objects[0].position);
     objects[1].Trail.push(objects[1].position);
 
-    objects[0].position.add(objects[0].velocity);
-    objects[1].position.add(objects[1].velocity);
+    objects[0].position += objects[0].velocity;
+    objects[1].position += objects[1].velocity;
     DrawObjects(renderer);
 }
 
@@ -331,9 +176,9 @@ HuyN_ {
 
     objects.push_back({
         100,
-        {400, static_cast<double>(iFloor - 100 - 1)},
-        {6, 2},
-        {0, 0},
+        Vector2<double>{400, static_cast<double>(iFloor - 100 - 1)},
+        Vector2<double>{6, 2},
+        Vector2<double>{0, 0},
         40,
         0,
         0
@@ -341,16 +186,16 @@ HuyN_ {
 
     objects.push_back({
         75,
-        {600, static_cast<double>(iFloor - 100 - 1)},
-        {5, 1},
-        {0, 0},
+        Vector2<double>{600, static_cast<double>(iFloor - 100 - 1)},
+        Vector2<double>{5, 1},
+        Vector2<double>{0, 0},
         40,
         0,
         0
     });
 
     for (auto& o : objects) {
-        o.acceleration.add(GravitationForce);
+        o.acceleration += GravitationForce;
     }
 
     while (isRunning) {
