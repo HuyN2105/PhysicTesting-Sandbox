@@ -108,3 +108,5 @@ fabric.properties
 *.exe
 *.out
 *.app
+
+.clang-format

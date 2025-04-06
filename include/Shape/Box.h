@@ -19,6 +19,12 @@ namespace Shape {
 
         // ****************************** BOX INITIALIZATION ****************************** //
 
+        const char type = 'b';
+
+        T radius;
+        T x;
+        T y;
+
         T top;
         T left;
         T width;    // must be positive
@@ -77,6 +83,13 @@ namespace Shape {
         }
 
     };
+
+    template <typename T>
+    constexpr void SDL_RenderDrawBox(SDL_Renderer *renderer, Box<T> box) noexcept {
+        const SDL_Rect rect{box.x, box.y, box.width, box.height};
+        std::cout << box.x << ", " << box.y << ", " << box.width << ", " << box.height << std::endl;
+        SDL_RenderDrawRect(renderer, &rect);
+    }
 
 }
 

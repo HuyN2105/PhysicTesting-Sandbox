@@ -12,9 +12,7 @@ set(SDL2_LIB_DIR ${CMAKE_BINARY_DIR}/SDL2/lib)
 include_directories(${SDL2_INCLUDE_DIR} ${QUADTREE_INCLUDE_DIR} ${SHAPE_INCLUDE_DIR} ${PHYSIC_ENGINE_INCLUDE_DIR})
 link_directories(${SDL2_LIB_DIR})
 
-add_executable(physicTesting ${CMAKE_SOURCE_DIR}/src/main.cpp
-        include/HuyN_Physic/PhysicEngine.h
-        include/HuyN_Physic/Circle.h)
+add_executable(physicTesting ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
 target_link_libraries(${PROJECT_NAME} SDL2main SDL2 SDL2_ttf)
 

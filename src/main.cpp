@@ -4,8 +4,9 @@
 
 #include <bits/stdc++.h>
 #include <SDL.h>
-#include <QuadTree.h>
-#include <Circle.h>
+#include "QuadTree.h"
+#include "Circle.h"
+#include "PhysicEngine.h"
 
 using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack, HuyNVector::Vector2;
 
@@ -58,8 +59,7 @@ struct objectsProperties {
     Vector2<double> velocity; // pixel per updateInterval
     Vector2<double> acceleration;
     double mass{};
-    double angularVelocity{};
-    double angularAcceleration{};
+    char type;
     queue<Vector2<double>> Trail;
 };
 
@@ -82,29 +82,39 @@ static int resizingEventWatcher(void* data, const SDL_Event* event) {
 
 void DrawObjects(SDL_Renderer *renderer) {
     // Trail
-    for (auto & o : objects) {
-        queue<Vector2<double>> tempTrail = o.Trail;
-        stack<Vector2<double>> DrawTrail;
-        while (!tempTrail.empty()) {
-            DrawTrail.push(tempTrail.front());
-            tempTrail.pop();
-        }
-
-        int offsetColor = 0;
-
-        while (!DrawTrail.empty()) {
-            SDL_SetRenderDrawColor(renderer, 0xFF - offsetColor, 0xFF - offsetColor, 0xFF - offsetColor, 255);
-            Shape::SDL_RenderFillCircle(renderer, static_cast<int>(DrawTrail.top().x), static_cast<int>(DrawTrail.top().y), static_cast<int>(o.radius));
-            DrawTrail.pop();
-            offsetColor += 12;
-        }
-        if (o.Trail.size() > 10) o.Trail.pop();
-    }
+    // for (auto & o : objects) {
+    //     queue<Vector2<double>> tempTrail = o.Trail;
+    //     stack<Vector2<double>> DrawTrail;
+    //     while (!tempTrail.empty()) {
+    //         DrawTrail.push(tempTrail.front());
+    //         tempTrail.pop();
+    //     }
+    //
+    //     int offsetColor = 0;
+    //
+    //     while (!DrawTrail.empty()) {
+    //         SDL_SetRenderDrawColor(renderer, 0xFF - offsetColor, 0xFF - offsetColor, 0xFF - offsetColor, 255);
+    //         Shape::SDL_RenderFillCircle(renderer, static_cast<int>(DrawTrail.top().x), static_cast<int>(DrawTrail.top().y), static_cast<int>(o.radius));
+    //         DrawTrail.pop();
+    //         offsetColor += 12;
+    //     }
+    //     if (o.Trail.size() > 10) o.Trail.pop();
+    // }
 
     // Main Object
     for (auto & o : objects) {
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 255);
-        Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
+        if (o.type == 'c') Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
+        // else if (o.type == 'b') Shape::SDL_RenderDrawBox(renderer, Shape::Box<double>{
+        //     objects[1].position.x,
+        //     objects[1].position.y,
+        //     objects[1].radius * 2,
+        //     objects[1].radius * 2
+        // });
+        else {
+            SDL_Rect rect{static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius * 2), static_cast<int>(o.radius * 2)};
+            SDL_RenderFillRect(renderer, &rect);
+        }
     }
 }
 
@@ -123,7 +133,30 @@ void Simulate(SDL_Renderer *renderer) {
         objects[1].velocity.y *= -1;
     }
 
-    if (objects[1].position.distance(objects[0].position) <= objects[1].radius + objects[0].radius) {
+    HuyNPhysic::Object obj1{
+        objects[0].position,
+        Shape::Circle{
+            objects[0].position.x,
+            objects[0].position.y,
+            objects[0].radius
+        },
+        objects[0].velocity,
+    };
+    HuyNPhysic::Object obj2{
+        objects[1].position,
+        Shape::Box{
+            objects[1].position.x,
+            objects[1].position.y,
+            objects[1].radius * 2,
+            objects[1].radius * 2
+        },
+        objects[1].velocity,
+    };
+
+    std::cout << objects[1].position.x << ", " << objects[1].position.y << std::endl;
+
+    // if (objects[1].position.distance(objects[0].position) <= objects[1].radius + objects[0].radius) {
+    if (CheckCollide(obj1, obj2)) {
         const double vMassSum = objects[0].mass + objects[1].mass;
         Vector2<double> vDiff = objects[1].velocity - objects[0].velocity;
         Vector2<double> vPosSub = objects[1].position - objects[0].position;
@@ -180,8 +213,7 @@ HuyN_ {
         Vector2<double>{6, 2},
         Vector2<double>{0, 0},
         40,
-        0,
-        0
+        'c'
     });
 
     objects.push_back({
@@ -189,9 +221,8 @@ HuyN_ {
         Vector2<double>{600, static_cast<double>(iFloor - 100 - 1)},
         Vector2<double>{5, 1},
         Vector2<double>{0, 0},
-        40,
-        0,
-        0
+        20,
+        'b'
     });
 
     for (auto& o : objects) {
@@ -223,7 +254,7 @@ HuyN_ {
             SDL_RenderDrawLine(renderer, LinesX.x, iFloor, LinesX.y, iFloor + 10);
             LinesX.x += 10; LinesX.y += 10;
         }
-        
+
         if (CurrentTick = SDL_GetTicks(); CurrentTick - LatestUpdatedTick >= FrameUpdateInterval) {
             Simulate(renderer);
             LatestUpdatedTick = CurrentTick;
