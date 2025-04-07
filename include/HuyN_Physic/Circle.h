@@ -11,51 +11,6 @@
 using HuyNVector::Vector2;
 
 namespace Shape {
-    template <typename T>
-    class Circle {
-    public:
-
-        // ****************************** CIRCLE INITIALIZATION ****************************** //
-
-        const char type = 'c';
-
-        T left;
-        T top;
-        T width;
-        T height;
-
-        T x;
-        T y;
-        T radius;
-
-        constexpr Circle(T x, T y, T radius) : x(x), y(y), radius(radius) {}
-
-        explicit constexpr Circle(Vector2<T>& position = {0, 0}, T radius = 0) : x(position.x), y(position.y), radius(radius) {}
-
-        // *********************************** CIRCLE FUNCTIONS *********************************** //
-
-        [[nodiscard]] constexpr T getBottom() const {
-            return y + radius;
-        }
-        [[nodiscard]] constexpr T getRight() const {
-            return x + radius;
-        }
-
-        [[nodiscard]] T distance(Circle& other) const noexcept {
-            return Vector2<T>(x - other.x, y - other.y).magnitude();
-        }
-
-        // ******************************** BUILT-IN DRAW FUNCTIONS ******************************** //
-
-        constexpr int SDL_DrawCircle(SDL_Renderer *renderer) {
-            return SDL_RenderDrawCircle(renderer, this.x, this.y, this.radius);
-        };
-
-        constexpr int SDL_FillCircle(SDL_Renderer *renderer) {
-            return SDL_RenderFillCircle(renderer, this.x, this.y, this.radius);
-        }
-
-    };
 
     constexpr int SDL_RenderDrawCircle(SDL_Renderer *renderer,const int x,const int y,const int radius) {
         int offsetX = 0;
@@ -123,6 +78,37 @@ namespace Shape {
         return status;
     };
 
+    template <typename T>
+    class Circle {
+    public:
+
+        // ****************************** CIRCLE INITIALIZATION ****************************** //
+
+        T x;
+        T y;
+        T radius;
+
+        constexpr Circle(T x, T y, T radius) : x(x), y(y), radius(radius) {}
+
+        explicit constexpr Circle(Vector2<T>& position = {0, 0}, T radius = 0) : x(position.x), y(position.y), radius(radius) {}
+
+        // ******************************** CIRCLE FUNCTIONS ******************************** //
+
+        [[nodiscard]] T distance(Vector2<T>& other) const noexcept {
+            return Vector2<T>(x - other.x, y - other.y).magnitude();
+        }
+
+        // ******************************** BUILT-IN DRAW FUNCTIONS ******************************** //
+
+        constexpr int SDL_DrawCircle(SDL_Renderer *renderer) {
+            return SDL_RenderDrawCircle(renderer, this.x, this.y, this.radius);
+        };
+
+        constexpr int SDL_FillCircle(SDL_Renderer *renderer) {
+            return SDL_RenderFillCircle(renderer, this.x, this.y, this.radius);
+        }
+
+    };
 }
 
 #endif //CIRCLE_H
