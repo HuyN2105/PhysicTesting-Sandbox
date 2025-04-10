@@ -59,6 +59,10 @@ namespace HuyNVector {
 
         // ********************************* VECTOR FUNCTION ********************************* //
 
+        [[nodiscard]] constexpr Vector2<T> pow(T lhs) const noexcept {
+            return Vector2<T>(x * lhs, y * lhs);
+        }
+
         [[nodiscard]] T magnitude() const noexcept {
             return sqrt(x * x + y * y);
         }

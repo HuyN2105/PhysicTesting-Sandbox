@@ -30,7 +30,7 @@ namespace Shape {
 
         constexpr Circle(T x, T y, T radius) : x(x), y(y), radius(radius) {}
 
-        explicit constexpr Circle(Vector2<T>& position = {0, 0}, T radius = 0) : x(position.x), y(position.y), radius(radius) {}
+        explicit constexpr Circle(Vector2<T> position = {0, 0}, T radius = 0) : x(position.x), y(position.y), radius(radius) {}
 
         // *********************************** CIRCLE FUNCTIONS *********************************** //
 

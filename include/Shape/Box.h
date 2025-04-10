@@ -30,9 +30,9 @@ namespace Shape {
         T width;    // must be positive
         T height;   // must be positive
 
-        constexpr Box(T left, T top, T width, T height) noexcept : top(top), left(left), width(width), height(height) {}
+        constexpr Box(T left, T top, T width, T height) noexcept : x(left + width / 2), y(top + height / 2), top(top), left(left), width(width), height(height) {}
 
-        explicit constexpr Box(Vector2<T>& position = {0, 0}, Vector2<T>& size = {0, 0}) noexcept : top(position.y), left(position.x), width(size.x), height(size.y) {}
+        explicit constexpr Box(Vector2<T> position = {0, 0}, Vector2<T> size = {0, 0}) noexcept : top(position.y), left(position.x), width(size.x), height(size.y), x(left + width / 2), y(top + height / 2) {}
 
         // ******************************** BOX FUNCTIONS ******************************** //
 

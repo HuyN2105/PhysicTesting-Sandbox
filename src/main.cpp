@@ -8,11 +8,11 @@
 #include "Circle.h"
 #include "PhysicEngine.h"
 
-using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack, HuyNVector::Vector2;
+using std::cout, std::cerr, std::endl, std::string, std::ceil, std::floor, std::vector, std::round, std::abs, std::sqrt, std::atan2, std::pow, std::sin, std::cos, std::acos, std::rand, std::queue, std::stack, HuyNVector::Vector2, std::get, std::move, std::visit, std::decay_t, std::is_same_v;
+
+using namespace HuyNPhysic;
 
 #define HuyN_ int main(int argc, char *argv[])
-
-#define PI 3.14159265358979323846
 
 class SDLException final : public std::runtime_error {
 public:
@@ -63,7 +63,7 @@ struct objectsProperties {
     queue<Vector2<double>> Trail;
 };
 
-vector<objectsProperties> objects;
+vector<Object<double>> objects;
 
 // FUNCTIONS
 
@@ -81,98 +81,42 @@ static int resizingEventWatcher(void* data, const SDL_Event* event) {
 
 
 void DrawObjects(SDL_Renderer *renderer) {
-    // Trail
-    // for (auto & o : objects) {
-    //     queue<Vector2<double>> tempTrail = o.Trail;
-    //     stack<Vector2<double>> DrawTrail;
-    //     while (!tempTrail.empty()) {
-    //         DrawTrail.push(tempTrail.front());
-    //         tempTrail.pop();
-    //     }
-    //
-    //     int offsetColor = 0;
-    //
-    //     while (!DrawTrail.empty()) {
-    //         SDL_SetRenderDrawColor(renderer, 0xFF - offsetColor, 0xFF - offsetColor, 0xFF - offsetColor, 255);
-    //         Shape::SDL_RenderFillCircle(renderer, static_cast<int>(DrawTrail.top().x), static_cast<int>(DrawTrail.top().y), static_cast<int>(o.radius));
-    //         DrawTrail.pop();
-    //         offsetColor += 12;
-    //     }
-    //     if (o.Trail.size() > 10) o.Trail.pop();
-    // }
-
-    // Main Object
-    for (auto & o : objects) {
+    for (const auto& o : objects) {
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 255);
-        if (o.type == 'c') Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
-        else if (o.type == 'b') Shape::Box<double>{
-            objects[1].position.x,
-            objects[1].position.y,
-            objects[1].radius * 2,
-            objects[1].radius * 2
-        }.SDL_FillBox(renderer);
+        visit([&](const auto& shape) {
+            if (is_same_v<decay_t<decltype(shape)>, Shape::Circle<double>>) {
+                Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.x), static_cast<int>(o.y), static_cast<int>(shape.radius));
+            } else if (is_same_v<decay_t<decltype(shape)>, Shape::Box<double>>) {
+                Shape::Box<double>{o.x - shape.width / 2, o.y - shape.height / 2, shape.width, shape.height}.SDL_FillBox(renderer);
+            }
+        }, o.shape);
     }
 }
 
 void Simulate(SDL_Renderer *renderer) {
+    for (auto& obj : objects) {
+        // Apply physics step with friction if on floor
+        bool onFloor = false;
+        // std::visit([&](const auto& shape) {
+        //     T halfExtent = std::is_same_v<std::decay_t<decltype(shape)>, Shape::Circle<double>> ? shape.radius : shape.height / 2;
+        //     onFloor = (obj.y + halfExtent >= 1.0 * iFloor);
+        // }, obj.shape);
 
-    if (objects[0].position.x - objects[0].radius <= 0 || objects[0].position.x + objects[0].radius >= WindowSize.w) {
-        objects[0].velocity.x *= -1;
-    }
-    if (objects[0].position.y - objects[0].radius <= 0 || objects[0].position.y + objects[0].radius >= 1.0 * iFloor) {
-        objects[0].velocity.y *= -1;
-    }
-    if (objects[1].position.x - objects[1].radius <= 0 || objects[1].position.x + objects[1].radius >= WindowSize.w) {
-        objects[1].velocity.x *= -1;
-    }
-    if (objects[1].position.y - objects[1].radius <= 0 || objects[1].position.y + objects[1].radius >= 1.0 * iFloor) {
-        objects[1].velocity.y *= -1;
-    }
+        CurrentTick = SDL_GetTicks();
 
-    HuyNPhysic::Object obj1{
-        objects[0].position,
-        Shape::Circle{
-            objects[0].position.x,
-            objects[0].position.y,
-            objects[0].radius
-        },
-        objects[0].velocity,
-    };
-    HuyNPhysic::Object obj2{
-        objects[1].position,
-        Shape::Box{
-            objects[1].position.x,
-            objects[1].position.y,
-            objects[1].radius * 2,
-            objects[1].radius * 2
-        },
-        objects[1].velocity,
-    };
+        obj.PhysicStep(CurrentTick - LatestUpdatedTick, onFloor, 0.3);
 
-    // if (objects[1].position.distance(objects[0].position) <= objects[1].radius + objects[0].radius) {
-    if (CheckCollide(obj1, obj2)) {
-        const double vMassSum = objects[0].mass + objects[1].mass;
-        Vector2<double> vDiff = objects[1].velocity - objects[0].velocity;
-        Vector2<double> vPosSub = objects[1].position - objects[0].position;
-        const double vDist = vPosSub.magnitude();
-        objects[0].velocity += (2 * objects[1].mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
-        vDiff = -1.0 * vDiff;
-        vPosSub = -1.0 * vPosSub;
-        objects[1].velocity += (2 * objects[0].mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
+        // Handle boundaries (minX, maxX, minY, maxY)
+        obj.handleBoundaries(0, WindowSize.w, 0, iFloor);
     }
 
-    // Acceleration
+    // Check collisions between all pairs (for simplicity, just the first two here)
+    if (CheckCollide(objects[0], objects[1])) {
+        CollisionProcess(&objects[0], &objects[1]);
+        cout << 0.5 * objects[0].mass * objects[0].velocity.pow(2).magnitude() + 0.5 * objects[1].mass * objects[1].velocity.pow(2).magnitude() << endl;
+    }
 
-    objects[0].velocity += (static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[0].acceleration;
-    objects[1].velocity += (static_cast<double>(CurrentTick - LatestUpdatedTick) / 1000) * objects[1].acceleration;
-
-    // Trail
-
-    objects[0].Trail.push(objects[0].position);
-    objects[1].Trail.push(objects[1].position);
-
-    objects[0].position += objects[0].velocity;
-    objects[1].position += objects[1].velocity;
+    LatestUpdatedTick = SDL_GetTicks();
     DrawObjects(renderer);
 }
 
@@ -201,27 +145,42 @@ HuyN_ {
     SDL_Event event;
     bool isRunning{true};
 
-    objects.push_back({
-        100,
-        Vector2<double>{400, static_cast<double>(iFloor - 100 - 1)},
-        Vector2<double>{6, 2},
-        Vector2<double>{0, 0},
+    objects.push_back(HuyNPhysic::Object<double>{
+        Vector2<double>{200, 200},
         40,
-        'c'
-    });
-
-    objects.push_back({
-        75,
-        Vector2<double>{600, static_cast<double>(iFloor - 100 - 1)},
-        Vector2<double>{5, 1},
+        Shape::Circle<double>{
+            Vector2<double>{200, 200},
+            100,
+        },
+        Vector2<double>{0, 320},
         Vector2<double>{0, 0},
-        30,
-        'b'
+    });
+    // objects.push_back(HuyNPhysic::Object<double>{
+    //     Vector2<double>{200, 200},
+    //     55,
+    //     Shape::Circle<double>{
+    //         Vector2<double>{200, 200},
+    //         120,
+    //     },
+    //     Vector2<double>{220, 250},
+    //     Vector2<double>{0, 0},
+    // });
+
+    objects.push_back(HuyNPhysic::Object<double>{
+        Vector2<double>{600, 200},
+        40,
+        Shape::Circle<double>{
+            Vector2<double>{600, 200},
+            // Vector2<double>{100, 100}
+            75
+        },
+        Vector2<double>{320, 240},
+        Vector2<double>{0, 0},
     });
 
-    for (auto& o : objects) {
-        o.acceleration += GravitationForce;
-    }
+    // for (auto& o : objects) {
+    //     o.acceleration += GravitationForce;
+    // }
 
     while (isRunning) {
 
@@ -249,10 +208,12 @@ HuyN_ {
             LinesX.x += 10; LinesX.y += 10;
         }
 
-        if (CurrentTick = SDL_GetTicks(); CurrentTick - LatestUpdatedTick >= FrameUpdateInterval) {
-            Simulate(renderer);
-            LatestUpdatedTick = CurrentTick;
-        }
+        // if (CurrentTick = SDL_GetTicks(); CurrentTick - LatestUpdatedTick >= FrameUpdateInterval) {
+        //     Simulate(renderer);
+        //     LatestUpdatedTick = CurrentTick;
+        // }
+
+        Simulate(renderer);
 
         SDL_RenderPresent(renderer);
 
