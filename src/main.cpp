@@ -1,4 +1,8 @@
 
+
+// RULE: 1px = 1cm irl
+
+
 // TODO: add multiple more objects and process with quadtree
 // TODO: add mouse drawing wall
 
@@ -51,7 +55,7 @@ int iDistance_From_Bottom_To_Floor = 40,
     iFloor = WindowSize.h - iDistance_From_Bottom_To_Floor;
 
 
-constexpr Vector2<double> GravitationForce{0, 9.8};
+constexpr Vector2<double> GravitationForce{0, 98};
 
 struct objectsProperties {
     double radius{};
@@ -152,7 +156,7 @@ HuyN_ {
             Vector2<double>{200, 200},
             100,
         },
-        Vector2<double>{0, 320},
+        Vector2<double>{0, 20},
         Vector2<double>{0, 0},
     });
     // objects.push_back(HuyNPhysic::Object<double>{
@@ -174,13 +178,13 @@ HuyN_ {
             // Vector2<double>{100, 100}
             75
         },
-        Vector2<double>{320, 240},
+        Vector2<double>{120, 40},
         Vector2<double>{0, 0},
     });
 
-    // for (auto& o : objects) {
-    //     o.acceleration += GravitationForce;
-    // }
+    for (auto& o : objects) {
+        o.acceleration += GravitationForce;
+    }
 
     while (isRunning) {
 
