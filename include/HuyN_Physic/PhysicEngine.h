@@ -26,18 +26,18 @@ namespace HuyNPhysic {
         T x;
         T y;
         Vector2<T> velocity;        // pixels per second
-        Vector2<T> acceleration;
+        Vector2<T> forcesApplying;
         T mass;
 
         shapeVariant<T> shape;
 
         constexpr Object(T x_, T y_, T mass_, shapeVariant<T> shape_, T velocity_x = 0, T velocity_y = 0, T acceleration_x = 0, T acceleration_y = 0) :
-        x(x_), y(y_), velocity({velocity_x, velocity_y}), acceleration({acceleration_x, acceleration_y}), mass(mass_), shape(std::move(shape_)) {
+        x(x_), y(y_), velocity({velocity_x, velocity_y}), forcesApplying({acceleration_x, acceleration_y}), mass(mass_), shape(std::move(shape_)) {
             syncShapePosition();
         }
 
         constexpr explicit Object(Vector2<T> position_, T mass_, shapeVariant<T> shape_, Vector2<T> velocity_ = 0, Vector2<T> acceleration_ = 0) :
-        x(position_.x), y(position_.y), velocity(velocity_), acceleration(acceleration_), mass(mass_), shape(std::move(shape_)) {
+        x(position_.x), y(position_.y), velocity(velocity_), forcesApplying(acceleration_), mass(mass_), shape(std::move(shape_)) {
             syncShapePosition();
         }
 
@@ -57,10 +57,14 @@ namespace HuyNPhysic {
 
         // ********************************** BASIC PHYSIC FUNCTIONS ********************************* //
 
+        constexpr void ApplyingForce(Vector2<T> force) {
+            forcesApplying += force * mass;
+        }
+
         constexpr void PhysicStep(T TickPassed, bool applyFriction = false, T frictionCoefficient = 0.1) {
             // 1 tick = 1 ms
 
-            velocity += acceleration * TickPassed / 1000.0;
+            velocity += forcesApplying * TickPassed / 1000.0;
 
             // velocity applied as pixels per second as default
             x += velocity.x * TickPassed / 1000.0;

@@ -1,6 +1,6 @@
 
 
-// RULE: 1px = 1cm irl
+// RULE: 1px = 10cm irl
 
 
 // TODO: add multiple more objects and process with quadtree
@@ -55,13 +55,13 @@ int iDistance_From_Bottom_To_Floor = 40,
     iFloor = WindowSize.h - iDistance_From_Bottom_To_Floor;
 
 
-constexpr Vector2<double> GravitationForce{0, 98};
+constexpr Vector2<double> Gravitational_Acceleration{0, 98};
 
 struct objectsProperties {
     double radius{};
     Vector2<double> position{};
     Vector2<double> velocity; // pixel per updateInterval
-    Vector2<double> acceleration;
+    Vector2<double> ApplyingForces;
     double mass{};
     char type;
     queue<Vector2<double>> Trail;
@@ -108,7 +108,7 @@ void Simulate(SDL_Renderer *renderer) {
 
         CurrentTick = SDL_GetTicks();
 
-        obj.PhysicStep(CurrentTick - LatestUpdatedTick, onFloor, 0.3);
+        obj.PhysicStep(FrameUpdateInterval, onFloor, 0.3);
 
         // Handle boundaries (minX, maxX, minY, maxY)
         obj.handleBoundaries(0, WindowSize.w, 0, iFloor);
@@ -156,7 +156,7 @@ HuyN_ {
             Vector2<double>{200, 200},
             100,
         },
-        Vector2<double>{0, 20},
+        Vector2<double>{22, 12},
         Vector2<double>{0, 0},
     });
     // objects.push_back(HuyNPhysic::Object<double>{
@@ -178,12 +178,13 @@ HuyN_ {
             // Vector2<double>{100, 100}
             75
         },
-        Vector2<double>{120, 40},
+        Vector2<double>{420, 24},
         Vector2<double>{0, 0},
     });
 
     for (auto& o : objects) {
-        o.acceleration += GravitationForce;
+        // Newton's 2nd law: F = ma
+        o.ApplyingForce(Gravitational_Acceleration);
     }
 
     while (isRunning) {
@@ -198,6 +199,17 @@ HuyN_ {
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     if (event.button.button == SDL_BUTTON_LEFT) {}
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.sym) {
+                        case SDLK_SPACE:
+                            for (auto& o : objects) {
+                                o.ApplyingForce(Vector2<double>{0, -1 * static_cast<double>(WindowSize.h / 2 / 10)});
+                                // TODO: fix this
+                            }
+                            break;
+                        default:
+                            break;
+                    }
                 default:
                     break;
             }
