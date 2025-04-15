@@ -1,5 +1,4 @@
 
-
 // RULE: 1px = 10cm irl
 
 
@@ -152,9 +151,10 @@ HuyN_ {
     objects.push_back(HuyNPhysic::Object<double>{
         Vector2<double>{200, 200},
         40,
-        Shape::Circle<double>{
+        Shape::Box<double>{
             Vector2<double>{200, 200},
-            100,
+            Vector2<double>{200, 200},
+            // 100,
         },
         Vector2<double>{22, 12},
         Vector2<double>{0, 0},
@@ -173,10 +173,10 @@ HuyN_ {
     objects.push_back(HuyNPhysic::Object<double>{
         Vector2<double>{600, 200},
         40,
-        Shape::Circle<double>{
+        Shape::Box<double>{
             Vector2<double>{600, 200},
-            // Vector2<double>{100, 100}
-            75
+            Vector2<double>{100, 100},
+            // 75
         },
         Vector2<double>{420, 24},
         Vector2<double>{0, 0},

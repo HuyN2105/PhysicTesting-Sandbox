@@ -136,10 +136,10 @@ namespace HuyNPhysic {
 
     template <typename T>
     bool rectRect(Shape::Box<T> r1, Shape::Box<T> r2) {
-        return (r1.getRight() >= r2.left &&    // r1 right edge past r2 left
-                r1.left <= r2.getRight() &&    // r1 left edge past r2 right
-                r1.top >= r2.getBottom() &&    // r1 top edge past r2 bottom
-                r1.getBottom() <= r2.top);     // r1 bottom edge past r2 top
+        return (r1.left <= r2.getRight() &&   // r1 left edge not past r2 right
+                r1.getRight() >= r2.left &&   // r1 right edge not past r2 left
+                r1.top <= r2.getBottom() &&   // r1 top edge not past r2 bottom
+                r1.getBottom() >= r2.top);    // r1 bottom edge not past r2 top
     }
 
     template <typename T>
@@ -170,14 +170,19 @@ namespace HuyNPhysic {
         return std::visit([&](const auto& s1, const auto& s2) {
             using S1 = std::decay_t<decltype(s1)>;
             using S2 = std::decay_t<decltype(s2)>;
+
             if constexpr (std::is_same_v<S1, Shape::Circle<T>> && std::is_same_v<S2, Shape::Circle<T>>)
                 return (Vector2<T>{obj1.x, obj1.y}.distance(Vector2<T>{obj2.x, obj2.y}) <= s1.radius + s2.radius);
+
             else if constexpr (std::is_same_v<S1, Shape::Circle<T>> && std::is_same_v<S2, Shape::Box<T>>)
                 return circleRect(s1, s2);
+
             else if constexpr (std::is_same_v<S1, Shape::Box<T>> && std::is_same_v<S2, Shape::Circle<T>>)
                 return circleRect(s2, s1);
+
             else if constexpr (std::is_same_v<S1, Shape::Box<T>> && std::is_same_v<S2, Shape::Box<T>>)
                 return rectRect(s1, s2);
+
             return false;
         }, obj1.shape, obj2.shape);
     }
@@ -197,6 +202,7 @@ namespace HuyNPhysic {
 
     template<typename T>
     constexpr void CollisionProcess(Object<T>* obj1, Object<T>* obj2) {
+
         // Velocity update (elastic collision)
         const T vMassSum = obj1->mass + obj2->mass;
         Vector2<T> vDiff = obj2->velocity - obj1->velocity;
