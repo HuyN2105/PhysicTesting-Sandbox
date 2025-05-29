@@ -3,6 +3,7 @@
 //
 #pragma once
 
+#include "BaseShape.h"
 #include "Vector2.h"
 #include "string"
 
@@ -14,48 +15,66 @@ using HuyNVector::Vector2;
 namespace Shape {
 
     template<typename T>
-    class Box {
+    class Box final : public BaseShape<T> {
     public:
 
         // ****************************** BOX INITIALIZATION ****************************** //
-
-        const char type = 'b';
-
-        T radius;
-        T x;
-        T y;
-
-        T top;
-        T left;
         T width;    // must be positive
         T height;   // must be positive
 
-        constexpr Box(T left, T top, T width, T height) noexcept : x(left + width / 2), y(top + height / 2), top(top), left(left), width(width), height(height) {}
+        Box(T x_, T y_, T width, T height) : BaseShape<T>('b'), width(width), height(height) {
+            this->setPosition(x_, y_);
+        }
 
-        explicit constexpr Box(Vector2<T> position = {0, 0}, Vector2<T> size = {0, 0}) noexcept : top(position.y), left(position.x), width(size.x), height(size.y), x(left + width / 2), y(top + height / 2) {}
+        Box(Vector2<T> position, T width, T height) : BaseShape<T>('b'), width(width), height(height) {
+            this->setPosition(position);
+        }
+
+        void setPosition(Vector2<T> position) override {
+            this->x = position.x;
+            this->y = position.y;
+        }
+
+        void setPosition(T x_, T y_) override {
+            this->x = x_;
+            this->y = y_;
+        }
 
         // ******************************** BOX FUNCTIONS ******************************** //
 
-        [[nodiscard]] constexpr T getRight() const noexcept { return left + width; }
+        [[nodiscard]] BaseShape<T>* clone() const override {
+            return new Box<T>(*this);
+        }
 
-        [[nodiscard]] constexpr T getBottom() const noexcept { return top + height; }
+        [[nodiscard]] constexpr T getRight() const noexcept { return this->x + width; }
 
-        [[nodiscard]] constexpr Vector2<T>& getTopLeft() const noexcept { return Vector2<T>(top, left); }
+        [[nodiscard]] constexpr T getBottom() const noexcept { return this->y + height; }
 
-        [[nodiscard]] constexpr Vector2<T>& getCenter() const noexcept { return Vector2<T>(left + width / 2, top + height / 2); }
+        [[nodiscard]] constexpr Vector2<T>& getTopLeft() const noexcept { return Vector2<T>(this->x, this->y); }
 
-        [[nodiscard]] constexpr bool contains(Vector2<T> position) const noexcept {
-            return (left <= position.x &&
+        [[nodiscard]] constexpr Vector2<T>& getCenter() const noexcept { return Vector2<T>(this->x + width / 2, this->y + height / 2); }
+
+        [[nodiscard]] constexpr T area() const override { return this->width * this->height; }
+
+        [[nodiscard]] bool contains(Vector2<T> position) const override {
+            return (this->x <= position.x &&
                     this->getRight() >= position.x &&
-                    top <= position.y &&
+                    this->y <= position.y &&
                     this->getBottom() >= position.y);
         }
 
+        [[nodiscard]] bool contains(T x_, T y_) const override {
+            return (this->x <= x_ &&
+                    this->getRight() >= x_ &&
+                    this->y <= y_ &&
+                    this->getBottom() >= y_);
+        }
+
         [[nodiscard]] constexpr bool intersects(const Box& other) const noexcept {
-            return !(left >= this->getRight() ||
-                     this->getRight() <= left ||
-                     top >= this->getBottom() ||
-                     this->getBottom() <= top);
+            return !(this->x >= this->getRight() ||
+                     this->getRight() <= this->x ||
+                     this->y >= this->getBottom() ||
+                     this->getBottom() <= this->y);
         }
 
         [[nodiscard]] constexpr Box subdivide(const std::string &quadrant) const noexcept {
@@ -65,10 +84,10 @@ namespace Shape {
             T extraWidth = static_cast<int>(this->width)%2;
             T extraHeight = static_cast<int>(this->height)%2;
 
-            if (quadrant == "nw") return Box(left, top, halfWidth + extraWidth, halfHeight + extraHeight);
-            if (quadrant == "ne") return Box(left + halfWidth, top, halfWidth + extraWidth, halfHeight + extraHeight);
-            if (quadrant == "sw") return Box(left, top + halfHeight, halfWidth + extraWidth, halfHeight + extraHeight);
-            if (quadrant == "se") return Box(left + halfWidth, top + halfHeight, halfWidth + extraWidth, halfHeight + extraHeight);
+            if (quadrant == "nw") return Box(this->x, this->y, halfWidth + extraWidth, halfHeight + extraHeight);
+            if (quadrant == "ne") return Box(this->x + halfWidth, this->y, halfWidth + extraWidth, halfHeight + extraHeight);
+            if (quadrant == "sw") return Box(this->x, this->y + halfHeight, halfWidth + extraWidth, halfHeight + extraHeight);
+            if (quadrant == "se") return Box(this->x + halfWidth, this->y + halfHeight, halfWidth + extraWidth, halfHeight + extraHeight);
 
             return Box(0, 0, 0, 0);
         }
@@ -77,12 +96,12 @@ namespace Shape {
         // ******************************** BUILT-IN DRAW FUNCTIONS ******************************** //
 
         constexpr void SDL_DrawBox(SDL_Renderer *renderer) const noexcept {
-            const SDL_Rect box{static_cast<int>(this.left), static_cast<int>(this.top), static_cast<int>(this.width), static_cast<int>(this.height)};
+            const SDL_Rect box{static_cast<int>(this->x), static_cast<int>(this->y), static_cast<int>(this.width), static_cast<int>(this.height)};
             SDL_RenderDrawRect(renderer, &box);
         }
 
         constexpr void SDL_FillBox(SDL_Renderer *renderer) const noexcept {
-            const SDL_Rect box{static_cast<int>(this->left), static_cast<int>(this->top), static_cast<int>(this->width), static_cast<int>(this->height)};
+            const SDL_Rect box{static_cast<int>(this->x), static_cast<int>(this->y), static_cast<int>(this->width), static_cast<int>(this->height)};
             SDL_RenderFillRect(renderer, &box);
         }
 

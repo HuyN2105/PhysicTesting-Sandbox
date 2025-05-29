@@ -5,6 +5,8 @@
 
 #include <Vector2.h>
 
+#include "BaseShape.h"
+
 #ifndef CIRCLE_H
 #define CIRCLE_H
 
@@ -12,47 +14,69 @@ using HuyNVector::Vector2;
 
 namespace Shape {
     template <typename T>
-    class Circle {
+    class Circle final : public BaseShape<T> {
     public:
 
         // ****************************** CIRCLE INITIALIZATION ****************************** //
-
-        const char type = 'c';
-
-        T left;
-        T top;
-        T width;
-        T height;
-
-        T x;
-        T y;
         T radius;
 
-        constexpr Circle(T x, T y, T radius) : x(x), y(y), radius(radius) {}
+        Circle(T x_, T y_, T radius_) : BaseShape<T>('c'), radius(radius_) {
+            this->x = x_;
+            this->y = y_;
+        }
 
-        explicit constexpr Circle(Vector2<T> position = {0, 0}, T radius = 0) : x(position.x), y(position.y), radius(radius) {}
+        explicit constexpr Circle(Vector2<T> position, T radius_) : BaseShape<T>('c'), radius(radius_) {
+            this->x = position.x;
+            this->y = position.y;
+        }
+
+        void setPosition(T x_, T y_) override {
+            this->x = x_;
+            this->y = y_;
+        }
+
+        void setPosition(Vector2<T> position) override {
+            this->x = position.x;
+            this->y = position.y;
+        }
 
         // *********************************** CIRCLE FUNCTIONS *********************************** //
 
-        [[nodiscard]] constexpr T getBottom() const {
-            return y + radius;
+        [[nodiscard]] BaseShape<T>* clone() const override {
+            return new Circle<T>(*this);
+        }
+
+        [[nodiscard]] T area() const override {
+            return M_PI * this->radius * this->radius;
+        }
+
+        [[nodiscard]] bool contains(Vector2<T> position) const override {
+            return (position.distance(Vector2<T>(this->x, this->y)) <= this->radius);
+        }
+
+        [[nodiscard]] bool contains(T x_, T y_) const override {
+            return ((Vector2<T>){x_, y_}.distance(Vector2<T>(this->x, this->y)) <= this->radius);
+        }
+
+        [[nodiscard]] T getBottom() const {
+            return this->y + radius;
         }
         [[nodiscard]] constexpr T getRight() const {
-            return x + radius;
+            return this->x + radius;
         }
 
         [[nodiscard]] T distance(Circle& other) const noexcept {
-            return Vector2<T>(x - other.x, y - other.y).magnitude();
+            return Vector2<T>(this->x - other.x, this->y - other.y).magnitude();
         }
 
         // ******************************** BUILT-IN DRAW FUNCTIONS ******************************** //
 
         constexpr int SDL_DrawCircle(SDL_Renderer *renderer) {
-            return SDL_RenderDrawCircle(renderer, this.x, this.y, this.radius);
+            return SDL_RenderDrawCircle(renderer, this->x, this->y, this.radius);
         };
 
         constexpr int SDL_FillCircle(SDL_Renderer *renderer) {
-            return SDL_RenderFillCircle(renderer, this.x, this.y, this.radius);
+            return SDL_RenderFillCircle(renderer, this->x, this->y, this.radius);
         }
 
     };
