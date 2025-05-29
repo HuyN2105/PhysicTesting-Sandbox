@@ -41,7 +41,7 @@ struct Pos {
     int y;
 };
 
-Size WindowSize{1280, 720};
+Size WindowSize{1360, 765};
 constexpr Size WindowMinSize{640, 480};
 
 
@@ -157,7 +157,7 @@ HuyN_ {
     SDL_Event event;
     bool isRunning{true};
 
-    int BallsAmount = 5;
+    int BallsAmount = 4;
 
     while (BallsAmount--) {
         auto randX = static_cast<double>(rand() % WindowSize.w - 100 + 100),
