@@ -86,13 +86,17 @@ static int resizingEventWatcher(void* data, const SDL_Event* event) {
 void DrawObjects(SDL_Renderer *renderer) {
     for (const auto& o : objects) {
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 255);
-        visit([&](const auto& shape) {
-            if (is_same_v<decay_t<decltype(shape)>, Shape::Circle<double>>) {
-                Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.x), static_cast<int>(o.y), static_cast<int>(shape.radius));
-            } else if (is_same_v<decay_t<decltype(shape)>, Shape::Box<double>>) {
-                Shape::Box<double>{o.x - shape.width / 2, o.y - shape.height / 2, shape.width, shape.height}.SDL_FillBox(renderer);
-            }
-        }, o.shape);
+
+        char shapeType = o.shape->getType();
+        if (shapeType == 'c') {
+            const auto* circle = dynamic_cast<Shape::Circle<double>*>(o.shape);
+            Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.x), static_cast<int>(o.y),
+                                       static_cast<int>(circle->radius));
+        } else if (shapeType == 'b') {
+            const auto* box = dynamic_cast<Shape::Box<double>*>(o.shape);
+            Shape::Box<double>{o.x - box->width / 2, o.y - box->height / 2,
+                              box->width, box->height}.SDL_FillBox(renderer);
+        }
     }
 }
 
@@ -100,23 +104,28 @@ void Simulate(SDL_Renderer *renderer) {
     for (auto& obj : objects) {
         // Apply physics step with friction if on floor
         bool onFloor = false;
-        // std::visit([&](const auto& shape) {
-        //     T halfExtent = std::is_same_v<std::decay_t<decltype(shape)>, Shape::Circle<double>> ? shape.radius : shape.height / 2;
-        //     onFloor = (obj.y + halfExtent >= 1.0 * iFloor);
-        // }, obj.shape);
+        char shapeType = obj.shape->getType();
+        if (shapeType == 'c') {
+            auto* circle = dynamic_cast<Shape::Circle<double>*>(obj.shape);
+            onFloor = (obj.y + circle->radius >= 1.0 * iFloor);
+        } else if (shapeType == 'b') {
+            auto* box = dynamic_cast<Shape::Box<double>*>(obj.shape);
+            onFloor = (obj.y + box->height/2 >= 1.0 * iFloor);
+        }
 
         CurrentTick = SDL_GetTicks();
-
         obj.PhysicStep(FrameUpdateInterval, onFloor, 0.3);
-
-        // Handle boundaries (minX, maxX, minY, maxY)
         obj.handleBoundaries(0, WindowSize.w, 0, iFloor);
     }
 
-    // Check collisions between all pairs (for simplicity, just the first two here)
-    if (CheckCollide(objects[0], objects[1])) {
-        CollisionProcess(&objects[0], &objects[1]);
-        cout << 0.5 * objects[0].mass * objects[0].velocity.pow(2).magnitude() + 0.5 * objects[1].mass * objects[1].velocity.pow(2).magnitude() << endl;
+    // TODO: applying quadtree
+
+    for (int i = 0; i < objects.size() - 1; i++) {
+        for (int j = i + 1; j < objects.size(); j++) {
+            if (CheckCollide(objects[i], objects[j])) {
+                CollisionProcess(&objects[i], &objects[j]);
+            }
+        }
     }
 
     LatestUpdatedTick = SDL_GetTicks();
@@ -148,39 +157,48 @@ HuyN_ {
     SDL_Event event;
     bool isRunning{true};
 
-    objects.push_back(HuyNPhysic::Object<double>{
-        Vector2<double>{200, 200},
-        40,
-        Shape::Box<double>{
-            Vector2<double>{200, 200},
-            Vector2<double>{200, 200},
-            // 100,
-        },
-        Vector2<double>{22, 12},
-        Vector2<double>{0, 0},
-    });
-    // objects.push_back(HuyNPhysic::Object<double>{
-    //     Vector2<double>{200, 200},
-    //     55,
-    //     Shape::Circle<double>{
-    //         Vector2<double>{200, 200},
-    //         120,
-    //     },
-    //     Vector2<double>{220, 250},
-    //     Vector2<double>{0, 0},
-    // });
+    int BallsAmount = 5;
 
-    objects.push_back(HuyNPhysic::Object<double>{
-        Vector2<double>{600, 200},
-        40,
-        Shape::Box<double>{
-            Vector2<double>{600, 200},
-            Vector2<double>{100, 100},
-            // 75
-        },
-        Vector2<double>{420, 24},
-        Vector2<double>{0, 0},
-    });
+    while (BallsAmount--) {
+        auto randX = static_cast<double>(rand() % WindowSize.w - 100 + 100),
+        randY = static_cast<double>(rand() % WindowSize.h - 100 + 100),
+        randRadius = static_cast<double>(rand() % 100 + 50);
+
+        bool containsCheck = true;
+        while (containsCheck) {
+            containsCheck = false;
+            for (const auto& obj : objects) {
+                if (obj.shape->getType() == 'c') {
+                    auto* circle = dynamic_cast<Shape::Circle<double>*>(obj.shape);
+                    if (Vector2{obj.x, obj.y}.distance(Vector2{randX, randY}) <= circle->radius + randRadius) {
+                        randX = static_cast<double>(rand() % WindowSize.w - 100 + 100);
+                        randY = static_cast<double>(rand() % WindowSize.h - 100 + 100);
+                        containsCheck = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Create a circle shape
+        auto* circleShape = new Shape::Circle<double>{
+            Vector2{randX, randY},
+            randRadius
+        };
+
+        objects.emplace_back(
+            randX, randY,
+            0.0, // Will set mass based on shape area
+            circleShape,
+            randX, randY,
+            0, 0
+        );
+
+        auto& lastObject = objects.back();
+        if (lastObject.shape->getType() == 'c') {
+            lastObject.mass = lastObject.shape->area() / 1000;
+        }
+    }
 
     for (auto& o : objects) {
         // Newton's 2nd law: F = ma
@@ -234,6 +252,10 @@ HuyN_ {
         SDL_RenderPresent(renderer);
 
     }
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return EXIT_SUCCESS;
 }
