@@ -75,7 +75,7 @@ namespace HuyNVector {
             return this/(magnitude()==0?1:magnitude());
         }
 
-        [[nodiscard]] double distance(const Vector2<T>& _v) const noexcept {
+        [[nodiscard]] constexpr double distance(const Vector2<T>& _v) const noexcept {
             return std::sqrt(std::pow(x - _v.x, 2) + std::pow(y - _v.y, 2));
         }
 

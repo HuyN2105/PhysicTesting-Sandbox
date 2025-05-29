@@ -147,6 +147,10 @@ namespace HuyNPhysic {
 
     // **************************************** COLLISION **************************************** //
 
+
+    // TODO: Collision - Implement the commented penetrationDepth logic for realistic resolution.
+
+
     template <typename T>
     bool rectRect(Shape::Box<T> r1, Shape::Box<T> r2) {
         return (r1.x <= r2.getRight() &&   // r1 left edge not past r2 right
@@ -207,80 +211,89 @@ namespace HuyNPhysic {
         return false;
     }
 
+            // **** BASE IMPLEMENTATION IDEA **** //
+    // template<typename T>
+    // void CollisionProcess(Object<T>* obj1, Object<T>* obj2) {
+    //     const double vMassSum = obj1->mass + obj2->mass;
+    //     Vector2<double> vDiff = obj2->velocity - obj1->velocity;
+    //     Vector2<double> vPosSub = obj2->Vector2Position() - obj1->Vector2Position();
+    //     const double vDist = vPosSub.magnitude();
+    //     obj1->velocity += (2 * obj2->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
+    //     vDiff = -1.0 * vDiff;
+    //     vPosSub = -1.0 * vPosSub;
+    //     obj2->velocity += (2 * obj1->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
+    // }
+
     template<typename T>
-    void CollisionProcess(Object<T>* obj1, Object<T>* obj2) {
-        const double vMassSum = obj1->mass + obj2->mass;
-        Vector2<double> vDiff = obj2->velocity - obj1->velocity;
-        Vector2<double> vPosSub = obj2->Vector2Position() - obj1->Vector2Position();
-        const double vDist = vPosSub.magnitude();
-        obj1->velocity += (2 * obj2->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
-        vDiff = -1.0 * vDiff;
-        vPosSub = -1.0 * vPosSub;
-        obj2->velocity += (2 * obj1->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
+    constexpr void CollisionProcess(Object<T>* obj1, Object<T>* obj2) {
+    // Velocity update (elastic collision)
+    const T vMassSum = obj1->mass + obj2->mass;
+    Vector2<T> vDiff = obj2->velocity - obj1->velocity;
+    Vector2<T> vPosSub = obj2->Vector2Position() - obj1->Vector2Position();
+    T vDist = vPosSub.magnitude();
+    if (vDist == 0) vDist = 1e-6; // Prevent division by zero
+    Vector2<T> normal = vPosSub / vDist; // Collision normal
+
+    // Velocity impulse
+    T impulse = (2 * obj2->mass / vMassSum) * vDiff.dot(normal);
+    obj1->velocity += impulse * normal;
+    obj2->velocity -= impulse * normal; // Opposite direction for obj2
+
+    // Position correction
+    T penetrationDepth = 0;
+    char type1 = obj1->shape->getType();
+    char type2 = obj2->shape->getType();
+
+    if (type1 == 'c' && type2 == 'c') {
+        auto* circle1 = dynamic_cast<Shape::Circle<T>*>(obj1->shape);
+        auto* circle2 = dynamic_cast<Shape::Circle<T>*>(obj2->shape);
+        penetrationDepth = (circle1->radius + circle2->radius) - vDist;
+    } else if (type1 == 'c' && type2 == 'b') {
+        auto* circle = dynamic_cast<Shape::Circle<T>*>(obj1->shape);
+        auto* box = dynamic_cast<Shape::Box<T>*>(obj2->shape);
+        // Approximate penetration using circle-box distance
+        Vector2<T> closestPoint(
+            std::max(box->x - box->width/2, std::min(obj1->x, box->x + box->width/2)),
+            std::max(box->y - box->height/2, std::min(obj1->y, box->y + box->height/2))
+        );
+        T distToBox = (obj1->Vector2Position() - closestPoint).magnitude();
+        penetrationDepth = circle->radius - distToBox;
+    } else if (type1 == 'b' && type2 == 'c') {
+        auto* box = dynamic_cast<Shape::Box<T>*>(obj1->shape);
+        auto* circle = dynamic_cast<Shape::Circle<T>*>(obj2->shape);
+        Vector2<T> closestPoint(
+            std::max(box->x - box->width/2, std::min(obj2->x, box->x + box->width/2)),
+            std::max(box->y - box->height/2, std::min(obj2->y, box->y + box->height/2))
+        );
+        T distToBox = (obj2->Vector2Position() - closestPoint).magnitude();
+        penetrationDepth = circle->radius - distToBox;
+    } else if (type1 == 'b' && type2 == 'b') {
+        auto* box1 = dynamic_cast<Shape::Box<T>*>(obj1->shape);
+        auto* box2 = dynamic_cast<Shape::Box<T>*>(obj2->shape);
+        // Simplified box-box penetration (along normal)
+        T overlapX = std::min(box1->x + box1->width/2, box2->x + box2->width/2) -
+                      std::max(box1->x - box1->width/2, box2->x - box2->width/2);
+        T overlapY = std::min(box1->y + box1->height/2, box2->y + box2->height/2) -
+                      std::max(box1->y - box1->height/2, box2->y - box2->height/2);
+        penetrationDepth = std::min(overlapX, overlapY); // Minimum overlap direction
     }
 
-        // template<typename T>
-    // constexpr void CollisionProcess(Object<T>* obj1, Object<T>* obj2) {
-    //
-    //     // Velocity update (elastic collision)
-    //     const T vMassSum = obj1->mass + obj2->mass;
-    //     Vector2<T> vDiff = obj2->velocity - obj1->velocity;
-    //     Vector2<T> vPosSub = obj2->Vector2Position() - obj1->Vector2Position();
-    //     T vDist = vPosSub.magnitude();
-    //     if (vDist == 0) vDist = 1e-6; // Prevent division by zero
-    //     Vector2<T> normal = vPosSub / vDist; // Collision normal
-    //
-    //     // Velocity impulse
-    //     T impulse = (2 * obj2->mass / vMassSum) * vDiff.dot(normal);
-    //     obj1->velocity += impulse * normal;
-    //     obj2->velocity -= impulse * normal; // Opposite direction for obj2
-    //
-    //     // Position correction
-    //     T penetrationDepth = 0;
-    //     std::visit([&](const auto& s1, const auto& s2) {
-    //         using S1 = std::decay_t<decltype(s1)>;
-    //         using S2 = std::decay_t<decltype(s2)>;
-    //         if constexpr (std::is_same_v<S1, Shape::Circle<T>> && std::is_same_v<S2, Shape::Circle<T>>) {
-    //             penetrationDepth = (s1.radius + s2.radius) - vDist;
-    //         } else if constexpr (std::is_same_v<S1, Shape::Circle<T>> && std::is_same_v<S2, Shape::Box<T>>) {
-    //             // Approximate penetration using circle-box distance
-    //             Vector2<T> closestPoint(
-    //                 std::max(s2.left, std::min(s1.x, s2.left + s2.width)),
-    //                 std::max(s2.top, std::min(s1.y, s2.top + s2.height))
-    //             );
-    //             T distToBox = (obj1->Vector2Position() - closestPoint).magnitude();
-    //             penetrationDepth = s1.radius - distToBox;
-    //         } else if constexpr (std::is_same_v<S1, Shape::Box<T>> && std::is_same_v<S2, Shape::Circle<T>>) {
-    //             Vector2<T> closestPoint(
-    //                 std::max(s1.left, std::min(s2.x, s1.left + s1.width)),
-    //                 std::max(s1.top, std::min(s2.y, s1.top + s1.height))
-    //             );
-    //             T distToBox = (obj2->Vector2Position() - closestPoint).magnitude();
-    //             penetrationDepth = s2.radius - distToBox;
-    //         } else if constexpr (std::is_same_v<S1, Shape::Box<T>> && std::is_same_v<S2, Shape::Box<T>>) {
-    //             // Simplified box-box penetration (along normal)
-    //             T overlapX = std::min(s1.left + s1.width, s2.left + s2.width) - std::max(s1.left, s2.left);
-    //             T overlapY = std::min(s1.top + s1.height, s2.top + s2.height) - std::max(s1.top, s2.top);
-    //             penetrationDepth = std::min(overlapX, overlapY); // Minimum overlap direction
-    //         }
-    //     }, obj1->shape, obj2->shape);
-    //
-    //     if (penetrationDepth > 0) {
-    //         // Move objects apart proportional to their masses (inverse mass ratio)
-    //         T totalInvMass = (obj1->mass > 0 ? 1 / obj1->mass : 0) + (obj2->mass > 0 ? 1 / obj2->mass : 0);
-    //         if (totalInvMass == 0) totalInvMass = 1; // Avoid division by zero if both are infinite mass
-    //         T move1 = (obj1->mass > 0 ? (1 / obj1->mass) / totalInvMass : 0) * penetrationDepth;
-    //         T move2 = (obj2->mass > 0 ? (1 / obj2->mass) / totalInvMass : 0) * penetrationDepth;
-    //
-    //         obj1->x -= normal.x * move1;
-    //         obj1->y -= normal.y * move1;
-    //         obj2->x += normal.x * move2;
-    //         obj2->y += normal.y * move2;
-    //
-    //         obj1->syncShapePosition();
-    //         obj2->syncShapePosition();
-    //     }
-    // }
+    if (penetrationDepth > 0) {
+        // Move objects apart proportional to their masses (inverse mass ratio)
+        T totalInvMass = (obj1->mass > 0 ? 1 / obj1->mass : 0) + (obj2->mass > 0 ? 1 / obj2->mass : 0);
+        if (totalInvMass == 0) totalInvMass = 1; // Avoid division by zero if both are infinite mass
+        T move1 = (obj1->mass > 0 ? (1 / obj1->mass) / totalInvMass : 0) * penetrationDepth;
+        T move2 = (obj2->mass > 0 ? (1 / obj2->mass) / totalInvMass : 0) * penetrationDepth;
+
+        obj1->x -= normal.x * move1;
+        obj1->y -= normal.y * move1;
+        obj2->x += normal.x * move2;
+        obj2->y += normal.y * move2;
+
+        obj1->syncShapePosition();
+        obj2->syncShapePosition();
+    }
+}
 }
 
 #endif //PHYSICENGINE_H
