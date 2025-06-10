@@ -49,12 +49,12 @@ namespace HuyNVector {
             return *this;
         }
 
-        constexpr bool operator==(Vector2<T>* _v) noexcept {
-            return (_v->x == this->x && _v->y == this->y);
+        constexpr bool operator==(const Vector2<T>& _v) const noexcept {
+            return (_v.x == x && _v.y == y);
         }
 
-        constexpr bool operator!=(Vector2<T> _v) noexcept {
-            return !(_v == this);
+        constexpr bool operator!=(const Vector2<T>& _v) const noexcept {
+            return !(*this == _v);
         }
 
         // ********************************* VECTOR FUNCTION ********************************* //
@@ -72,7 +72,7 @@ namespace HuyNVector {
         }
 
         [[nodiscard]] Vector2<T> normalize() const noexcept {
-            return this/(magnitude()==0?1:magnitude());
+            return (*this) / (magnitude() == 0 ? 1 : magnitude());
         }
 
         [[nodiscard]] constexpr double distance(const Vector2<T>& _v) const noexcept {
