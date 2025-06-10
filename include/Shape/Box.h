@@ -76,21 +76,17 @@ namespace Shape {
 
         // ******************************** BUILT-IN DRAW FUNCTIONS ******************************** //
 
-
         constexpr void SDL_DrawBox(SDL_Renderer *renderer) const noexcept {
             const SDL_Rect box{static_cast<int>(this.left), static_cast<int>(this.top), static_cast<int>(this.width), static_cast<int>(this.height)};
             SDL_RenderDrawRect(renderer, &box);
         }
 
+        constexpr void SDL_FillBox(SDL_Renderer *renderer) const noexcept {
+            const SDL_Rect box{static_cast<int>(this->left), static_cast<int>(this->top), static_cast<int>(this->width), static_cast<int>(this->height)};
+            SDL_RenderFillRect(renderer, &box);
+        }
+
     };
-
-    template <typename T>
-    constexpr void SDL_RenderDrawBox(SDL_Renderer *renderer, Box<T> box) noexcept {
-        const SDL_Rect rect{box.x, box.y, box.width, box.height};
-        std::cout << box.x << ", " << box.y << ", " << box.width << ", " << box.height << std::endl;
-        SDL_RenderDrawRect(renderer, &rect);
-    }
-
 }
 
 #endif //BOX_H

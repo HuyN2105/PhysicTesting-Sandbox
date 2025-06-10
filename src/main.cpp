@@ -105,16 +105,12 @@ void DrawObjects(SDL_Renderer *renderer) {
     for (auto & o : objects) {
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 255);
         if (o.type == 'c') Shape::SDL_RenderFillCircle(renderer, static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius));
-        // else if (o.type == 'b') Shape::SDL_RenderDrawBox(renderer, Shape::Box<double>{
-        //     objects[1].position.x,
-        //     objects[1].position.y,
-        //     objects[1].radius * 2,
-        //     objects[1].radius * 2
-        // });
-        else {
-            SDL_Rect rect{static_cast<int>(o.position.x), static_cast<int>(o.position.y), static_cast<int>(o.radius * 2), static_cast<int>(o.radius * 2)};
-            SDL_RenderFillRect(renderer, &rect);
-        }
+        else if (o.type == 'b') Shape::Box<double>{
+            objects[1].position.x,
+            objects[1].position.y,
+            objects[1].radius * 2,
+            objects[1].radius * 2
+        }.SDL_FillBox(renderer);
     }
 }
 
@@ -152,8 +148,6 @@ void Simulate(SDL_Renderer *renderer) {
         },
         objects[1].velocity,
     };
-
-    std::cout << objects[1].position.x << ", " << objects[1].position.y << std::endl;
 
     // if (objects[1].position.distance(objects[0].position) <= objects[1].radius + objects[0].radius) {
     if (CheckCollide(obj1, obj2)) {
