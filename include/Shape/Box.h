@@ -71,9 +71,9 @@ namespace Shape {
         }
 
         [[nodiscard]] constexpr bool intersects(const Box& other) const noexcept {
-            return !(x >= other.getRight() ||
+            return !(this->x >= other.getRight() ||
                      other.x >= getRight() ||
-                     y >= other.getBottom() ||
+                     this->y >= other.getBottom() ||
                      other.y >= getBottom());
         }
 

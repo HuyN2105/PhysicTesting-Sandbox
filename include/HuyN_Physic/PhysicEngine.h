@@ -23,25 +23,25 @@ namespace HuyNPhysic {
         T x;
         T y;
         Vector2<T> velocity;        // pixels per second
-        Vector2<T> forcesApplying;
+        Vector2<T> acceleration;
         T mass;
 
         Shape::BaseShape<T>* shape;
 
         Object(T x_, T y_, T mass_, Shape::BaseShape<T>* shape_, T velocity_x = 0, T velocity_y = 0, T acceleration_x = 0, T acceleration_y = 0) :
-        x(x_), y(y_), velocity(Vector2<T>{velocity_x, velocity_y}), forcesApplying(Vector2<T>{acceleration_x, acceleration_y}), mass(mass_), shape(shape_->clone()) {
+        x(x_), y(y_), velocity(Vector2<T>{velocity_x, velocity_y}), acceleration(Vector2<T>{acceleration_x, acceleration_y}), mass(mass_), shape(shape_->clone()) {
             syncShapePosition();
         }
 
         explicit Object(Vector2<T> position_, T mass_, Shape::BaseShape<T>* shape_, Vector2<T> velocity_ = {0, 0}, Vector2<T> acceleration_ = {0, 0}) :
-        x(position_.x), y(position_.y), velocity(velocity_), forcesApplying(acceleration_), mass(mass_), shape(shape_->clone()) {
+        x(position_.x), y(position_.y), velocity(velocity_), acceleration(acceleration_), mass(mass_), shape(shape_->clone()) {
             syncShapePosition();
         }
 
         // Copy constructor
         Object(const Object& other) :
             x(other.x), y(other.y), velocity(other.velocity),
-            forcesApplying(other.forcesApplying), mass(other.mass),
+            acceleration(other.acceleration), mass(other.mass),
             shape(other.shape->clone()) {}
 
         // Assignment operator
@@ -50,7 +50,7 @@ namespace HuyNPhysic {
                 x = other.x;
                 y = other.y;
                 velocity = other.velocity;
-                forcesApplying = other.forcesApplying;
+                acceleration = other.acceleration;
                 mass = other.mass;
                 delete shape;
                 shape = other.shape->clone();
@@ -70,12 +70,12 @@ namespace HuyNPhysic {
         // ********************************** BASIC PHYSIC FUNCTIONS ********************************* //
 
         void ApplyingForce(Vector2<T> force) {
-            forcesApplying += force * mass;
+            acceleration += force / mass;
         }
 
         void PhysicStep(T TickPassed, bool applyFriction = false, T frictionCoefficient = 0.1) {
             // 1 tick = 1 ms
-            velocity += forcesApplying * TickPassed / 1000.0;
+            velocity += acceleration * TickPassed / 1000.0;
 
             // velocity applied as pixels per second as default
             x += velocity.x * TickPassed / 1000.0;
@@ -145,6 +145,14 @@ namespace HuyNPhysic {
         }
     };
 
+
+    // ************************************* NEWTON'S SECOND LAW ************************************ //
+
+    template<typename T>
+    Vector2<T> Newtons_second_law_acceleration(Vector2<T> F, Object<T>* object) {
+        return F/object->mass;
+    }
+
     // **************************************** COLLISION **************************************** //
 
 
@@ -211,65 +219,65 @@ namespace HuyNPhysic {
         return false;
     }
 
-            // **** BASE IMPLEMENTATION IDEA **** //
+    //         // **** BASE IMPLEMENTATION IDEA **** //
     // template<typename T>
-    // void CollisionProcess(Object<T>* obj1, Object<T>* obj2) {
-    //     const double vMassSum = obj1->mass + obj2->mass;
-    //     Vector2<double> vDiff = obj2->velocity - obj1->velocity;
-    //     Vector2<double> vPosSub = obj2->Vector2Position() - obj1->Vector2Position();
+    // void CollisionProcess(Object<T>* proactive_obj, Object<T>* passive_obj) {
+    //     const double vMassSum = proactive_obj->mass + passive_obj->mass;
+    //     Vector2<double> vDiff = passive_obj->velocity - proactive_obj->velocity;
+    //     Vector2<double> vPosSub = passive_obj->Vector2Position() - proactive_obj->Vector2Position();
     //     const double vDist = vPosSub.magnitude();
-    //     obj1->velocity += (2 * obj2->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
+    //     proactive_obj->velocity += (2 * passive_obj->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
     //     vDiff = -1.0 * vDiff;
     //     vPosSub = -1.0 * vPosSub;
-    //     obj2->velocity += (2 * obj1->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
+    //     passive_obj->velocity += (2 * proactive_obj->mass / vMassSum) * vDiff.dot(vPosSub) / pow(vDist, 2) * vPosSub;
     // }
 
     template<typename T>
-    constexpr void CollisionProcess(Object<T>* obj1, Object<T>* obj2) {
+    constexpr void CollisionProcess(Object<T>* proactive_obj, Object<T>* passive_obj) {
     // Velocity update (elastic collision)
-    const T vMassSum = obj1->mass + obj2->mass;
-    Vector2<T> vDiff = obj2->velocity - obj1->velocity;
-    Vector2<T> vPosSub = obj2->Vector2Position() - obj1->Vector2Position();
+    const T vMassSum = proactive_obj->mass + passive_obj->mass;
+    Vector2<T> vDiff = passive_obj->velocity - proactive_obj->velocity;
+    Vector2<T> vPosSub = passive_obj->Vector2Position() - proactive_obj->Vector2Position();
     T vDist = vPosSub.magnitude();
     if (vDist == 0) vDist = 1e-6; // Prevent division by zero
     Vector2<T> normal = vPosSub / vDist; // Collision normal
 
     // Velocity impulse
-    T impulse = (2 * obj2->mass / vMassSum) * vDiff.dot(normal);
-    obj1->velocity += impulse * normal;
-    obj2->velocity -= impulse * normal; // Opposite direction for obj2
+    T impulse = (2 * passive_obj->mass / vMassSum) * vDiff.dot(normal);
+    proactive_obj->velocity += impulse * normal;
+    passive_obj->velocity -= impulse * normal; // Opposite direction for obj2
 
     // Position correction
     T penetrationDepth = 0;
-    char type1 = obj1->shape->getType();
-    char type2 = obj2->shape->getType();
+    char type1 = proactive_obj->shape->getType();
+    char type2 = passive_obj->shape->getType();
 
     if (type1 == 'c' && type2 == 'c') {
-        auto* circle1 = dynamic_cast<Shape::Circle<T>*>(obj1->shape);
-        auto* circle2 = dynamic_cast<Shape::Circle<T>*>(obj2->shape);
+        auto* circle1 = dynamic_cast<Shape::Circle<T>*>(proactive_obj->shape);
+        auto* circle2 = dynamic_cast<Shape::Circle<T>*>(passive_obj->shape);
         penetrationDepth = (circle1->radius + circle2->radius) - vDist;
     } else if (type1 == 'c' && type2 == 'b') {
-        auto* circle = dynamic_cast<Shape::Circle<T>*>(obj1->shape);
-        auto* box = dynamic_cast<Shape::Box<T>*>(obj2->shape);
+        auto* circle = dynamic_cast<Shape::Circle<T>*>(proactive_obj->shape);
+        auto* box = dynamic_cast<Shape::Box<T>*>(passive_obj->shape);
         // Approximate penetration using circle-box distance
         Vector2<T> closestPoint(
-            std::max(box->x - box->width/2, std::min(obj1->x, box->x + box->width/2)),
-            std::max(box->y - box->height/2, std::min(obj1->y, box->y + box->height/2))
+            std::max(box->x - box->width/2, std::min(proactive_obj->x, box->x + box->width/2)),
+            std::max(box->y - box->height/2, std::min(proactive_obj->y, box->y + box->height/2))
         );
-        T distToBox = (obj1->Vector2Position() - closestPoint).magnitude();
+        T distToBox = (proactive_obj->Vector2Position() - closestPoint).magnitude();
         penetrationDepth = circle->radius - distToBox;
     } else if (type1 == 'b' && type2 == 'c') {
-        auto* box = dynamic_cast<Shape::Box<T>*>(obj1->shape);
-        auto* circle = dynamic_cast<Shape::Circle<T>*>(obj2->shape);
+        auto* box = dynamic_cast<Shape::Box<T>*>(proactive_obj->shape);
+        auto* circle = dynamic_cast<Shape::Circle<T>*>(passive_obj->shape);
         Vector2<T> closestPoint(
-            std::max(box->x - box->width/2, std::min(obj2->x, box->x + box->width/2)),
-            std::max(box->y - box->height/2, std::min(obj2->y, box->y + box->height/2))
+            std::max(box->x - box->width/2, std::min(passive_obj->x, box->x + box->width/2)),
+            std::max(box->y - box->height/2, std::min(passive_obj->y, box->y + box->height/2))
         );
-        T distToBox = (obj2->Vector2Position() - closestPoint).magnitude();
+        T distToBox = (passive_obj->Vector2Position() - closestPoint).magnitude();
         penetrationDepth = circle->radius - distToBox;
     } else if (type1 == 'b' && type2 == 'b') {
-        auto* box1 = dynamic_cast<Shape::Box<T>*>(obj1->shape);
-        auto* box2 = dynamic_cast<Shape::Box<T>*>(obj2->shape);
+        auto* box1 = dynamic_cast<Shape::Box<T>*>(proactive_obj->shape);
+        auto* box2 = dynamic_cast<Shape::Box<T>*>(passive_obj->shape);
         // Simplified box-box penetration (along normal)
         T overlapX = std::min(box1->x + box1->width/2, box2->x + box2->width/2) -
                       std::max(box1->x - box1->width/2, box2->x - box2->width/2);
@@ -280,20 +288,50 @@ namespace HuyNPhysic {
 
     if (penetrationDepth > 0) {
         // Move objects apart proportional to their masses (inverse mass ratio)
-        T totalInvMass = (obj1->mass > 0 ? 1 / obj1->mass : 0) + (obj2->mass > 0 ? 1 / obj2->mass : 0);
+        T totalInvMass = (proactive_obj->mass > 0 ? 1 / proactive_obj->mass : 0) + (passive_obj->mass > 0 ? 1 / passive_obj->mass : 0);
         if (totalInvMass == 0) totalInvMass = 1; // Avoid division by zero if both are infinite mass
-        T move1 = (obj1->mass > 0 ? (1 / obj1->mass) / totalInvMass : 0) * penetrationDepth;
-        T move2 = (obj2->mass > 0 ? (1 / obj2->mass) / totalInvMass : 0) * penetrationDepth;
+            T move1 = (proactive_obj->mass > 0 ? (1 / proactive_obj->mass) / totalInvMass : 0) * penetrationDepth;
+            T move2 = (passive_obj->mass > 0 ? (1 / passive_obj->mass) / totalInvMass : 0) * penetrationDepth;
 
-        obj1->x -= normal.x * move1;
-        obj1->y -= normal.y * move1;
-        obj2->x += normal.x * move2;
-        obj2->y += normal.y * move2;
+            proactive_obj->x -= normal.x * move1;
+            proactive_obj->y -= normal.y * move1;
+            passive_obj->x += normal.x * move2;
+            passive_obj->y += normal.y * move2;
 
-        obj1->syncShapePosition();
-        obj2->syncShapePosition();
+            proactive_obj->syncShapePosition();
+            passive_obj->syncShapePosition();
+        }
     }
-}
+
+
+
+    // ******************************** GRAVITY - Fundamental interaction ******************************** //
+
+
+    inline double Gravitational_Constant = 6.674e-11; // unit : Nm^2/kg^2
+
+    template<typename T>
+    constexpr Vector2<T> GravitationalForce(Object<T>* obj1, Object<T>* obj2) {
+        Vector2<T> direction = Vector2<T>{obj2->x, obj2->y} - Vector2<T>{obj1->x, obj1->y};
+        T distance = direction.magnitude();
+        // Prevent division by zero
+        if (distance < 1e-6) distance = 1e-6;
+
+        // Calculate force magnitude
+        T forceMagnitude = Gravitational_Constant * (obj1->mass * obj2->mass) / (distance * distance);
+
+        // Return force vector
+        return direction.normalize() * forceMagnitude;
+    }
+
+    template<typename T>
+    constexpr void GravitationalEffect(Object<T>* object, Object<T>* other) {
+        Vector2<T> Force_Against_Each_Other = GravitationalForce(object, other);
+
+        object->acceleration += Newtons_second_law_acceleration(Force_Against_Each_Other, object);
+        other->acceleration += Newtons_second_law_acceleration(Force_Against_Each_Other, other);
+    }
+
 }
 
 #endif //PHYSICENGINE_H

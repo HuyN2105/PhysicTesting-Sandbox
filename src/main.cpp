@@ -1,5 +1,5 @@
 
-// RULE: 1px = 10cm irl
+// RULE: 1px = 1cm irl
 
 
 // TODO: add multiple more objects and process with quadtree
@@ -44,17 +44,17 @@ struct Pos {
 Size WindowSize{1360, 765};
 constexpr Size WindowMinSize{640, 480};
 
-
+double scaleFactor = 1.0; // Starting scale: 1 px = 1 cm
+Vector2 viewCenter{WindowSize.w / 2.0, WindowSize.h / 2.0}; // Center of the view
 
 QuadTree::QuadTree Q{Shape::Box<double>{10, 10, static_cast<double>(WindowSize.w - 20), static_cast<double>(WindowSize.h - 20)}};
 
 
-
-int iDistance_From_Bottom_To_Floor = 40,
+int iDistance_From_Bottom_To_Floor = 0,
     iFloor = WindowSize.h - iDistance_From_Bottom_To_Floor;
 
 
-constexpr Vector2<double> Gravitational_Acceleration{0, 98};
+constexpr Vector2<double> Gravitational_Acceleration{0, 9.8};
 
 struct objectsProperties {
     double radius{};
@@ -103,6 +103,9 @@ void DrawObjects(SDL_Renderer *renderer) {
 void Simulate(SDL_Renderer *renderer) {
     for (auto& obj : objects) {
         // Apply physics step with friction if on floor
+
+        obj.acceleration += Gravitational_Acceleration;
+
         bool onFloor = false;
         char shapeType = obj.shape->getType();
         if (shapeType == 'c') {
@@ -122,6 +125,9 @@ void Simulate(SDL_Renderer *renderer) {
 
     for (int i = 0; i < objects.size() - 1; i++) {
         for (int j = i + 1; j < objects.size(); j++) {
+
+            GravitationalEffect(&objects[i], &objects[j]);
+
             if (CheckCollide(objects[i], objects[j])) {
                 CollisionProcess(&objects[i], &objects[j]);
             }
@@ -219,12 +225,6 @@ HuyN_ {
                     if (event.button.button == SDL_BUTTON_LEFT) {}
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym) {
-                        case SDLK_SPACE:
-                            for (auto& o : objects) {
-                                o.ApplyingForce(Vector2<double>{0, -1 * static_cast<double>(WindowSize.h / 2 / 10)});
-                                // TODO: fix this
-                            }
-                            break;
                         default:
                             break;
                     }
