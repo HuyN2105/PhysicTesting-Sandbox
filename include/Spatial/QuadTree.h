@@ -42,7 +42,7 @@ namespace QuadTree {
             return this;
         }
 
-        [[nodiscard]] constexpr Vector2<T> *getPoints(Vector2<T> _pos) {
+        [[nodiscard]] constexpr std::vector<Vector2<T>> *getPoints(Vector2<T> _pos) {
             if (divided) {
                 for (auto& c : child) {
                     if (c->boundary.contains(_pos)) {
@@ -50,7 +50,7 @@ namespace QuadTree {
                     }
                 }
             }
-            return points;
+            return &points;
         }
 
         [[nodiscard]] constexpr Shape::Box<T> *getBoundary(Vector2<T> _pos) {

@@ -50,9 +50,9 @@ namespace Shape {
 
         [[nodiscard]] constexpr T getBottom() const noexcept { return this->y + height; }
 
-        [[nodiscard]] constexpr Vector2<T>& getTopLeft() const noexcept { return Vector2<T>(this->x, this->y); }
+        [[nodiscard]] constexpr Vector2<T> getTopLeft() const noexcept { return Vector2<T>(this->x, this->y); }
 
-        [[nodiscard]] constexpr Vector2<T>& getCenter() const noexcept { return Vector2<T>(this->x + width / 2, this->y + height / 2); }
+        [[nodiscard]] constexpr Vector2<T> getCenter() const noexcept { return Vector2<T>(this->x + width / 2, this->y + height / 2); }
 
         [[nodiscard]] constexpr T area() const override { return this->width * this->height; }
 
@@ -71,10 +71,10 @@ namespace Shape {
         }
 
         [[nodiscard]] constexpr bool intersects(const Box& other) const noexcept {
-            return !(this->x >= this->getRight() ||
-                     this->getRight() <= this->x ||
-                     this->y >= this->getBottom() ||
-                     this->getBottom() <= this->y);
+            return !(x >= other.getRight() ||
+                     other.x >= getRight() ||
+                     y >= other.getBottom() ||
+                     other.y >= getBottom());
         }
 
         [[nodiscard]] constexpr Box subdivide(const std::string &quadrant) const noexcept {
